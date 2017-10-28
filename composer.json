@@ -1,0 +1,27 @@
+{
+    "name": "robofirm/devops-tool-mysql-database-support",
+    "description": "Robofirm DevOps Tool: MySQL Database Support",
+    "type": "library",
+    "homepage": "https://bitbucket.org/robofirm/devops-tool-mysql-database-support",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Kirk Madera",
+            "email": "kmadera@robofirm.com"
+        }
+    ],
+    "require": {
+        "php": "^5.6 || ^7.0",
+        "ext-pdo_mysql": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "DevopsToolMySqlSupport\\": "src/"
+        }
+    },
+    "extra": {
+        "zf": {
+            "config-provider": "DevopsToolMySqlSupport\\ConfigProvider"
+        }
+    }
+}
