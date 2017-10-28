@@ -15,6 +15,7 @@ class ConfigProvider
     public function __invoke()
     {
         return [
+            'database' => $this->getDatabaseConfig(),
             'dependencies' => $this->getDependencies(),
         ];
     }
@@ -27,6 +28,16 @@ class ConfigProvider
     private function getDependencies()
     {
         return require(__DIR__ . '/../config/dependencies.php');
+    }
+
+    /**
+     * Returns the container dependencies
+     *
+     * @return array
+     */
+    private function getDatabaseConfig()
+    {
+        return require(__DIR__ . '/../config/database.php');
     }
 
 }

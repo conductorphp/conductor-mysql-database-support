@@ -46,10 +46,12 @@ class DatabaseMetadataProvider implements DatabaseMetadataProviderInterface
         $sql
             = "SELECT TABLE_NAME, table_rows, (data_length + index_length) 'size'
                 FROM information_schema.TABLES
-                WHERE table_schema = \"$database\" and TABLE_TYPE='BASE TABLE'
+                WHERE table_schema = :database and TABLE_TYPE='BASE TABLE'
                 ORDER BY TABLE_NAME ASC;";
         $query = $this->connection->prepare($sql);
-        $query->execute();
+        $query->execute([
+            ':database' => $database,
+        ]);
         $tableSizes = [];
         foreach ($query->fetchAll() as $row) {
             $tableSizes[$row['TABLE_NAME']] = [
