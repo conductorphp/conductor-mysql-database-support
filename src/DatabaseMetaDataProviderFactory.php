@@ -22,6 +22,6 @@ class DatabaseMetaDataProviderFactory implements \Zend\ServiceManager\Factory\Fa
     {
         $config = $container->get('config')['mysql'];
         $connection = new \PDO("mysql:host={$config['host']}", $config['user'], $config['password']);
-        return new DatabaseMetaDataProvider($connection);
+        return new DatabaseMetadataProvider($connection);
     }
 }

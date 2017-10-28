@@ -2,9 +2,9 @@
 
 namespace DevopsToolMySqlSupport;
 
-use DevopsToolCore\Database\DatabaseMetaDataProviderInterface;
+use DevopsToolCore\Database\DatabaseMetadataProviderInterface;
 
-class DatabaseMetaDataProvider implements DatabaseMetaDataProviderInterface
+class DatabaseMetadataProvider implements DatabaseMetadataProviderInterface
 {
     /**
      * @var \PDO

@@ -4,6 +4,6 @@ namespace DevopsToolMySqlSupport;
 
 return [
     'factories' => [
-        \DevopsToolCore\Database\DatabaseMetaDataProviderInterface::class => DatabaseMetaDataProviderFactory::class,
+        \DevopsToolCore\Database\DatabaseMetadataProviderInterface::class => DatabaseMetaDataProviderFactory::class,
     ],
 ];
