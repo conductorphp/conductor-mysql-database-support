@@ -11,6 +11,9 @@ use Psr\Log\LoggerInterface;
 
 class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
 {
+    const OPTION_IGNORE_TABLES = 'ignore_tables';
+    const OPTION_REMOVE_DEFINERS = 'remove_definers';
+
     /**
      * @var DatabaseConfig
      */
@@ -24,17 +27,19 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
      */
     private $logger;
 
+    /**
+     * MysqldumpExportAdapter constructor.
+     *
+     * @param DatabaseConfig       $databaseConfig
+     * @param ShellCommandHelper   $shellCommandHelper
+     * @param LoggerInterface|null $logger
+     */
     public function __construct(
         DatabaseConfig $databaseConfig,
         ShellCommandHelper $shellCommandHelper,
         LoggerInterface $logger = null
     ) {
-        if (!$this->isUsable()) {
-            throw new Exception\RuntimeException(__CLASS__ . ' is not usable in this environment.');
-        }
-
         $this->databaseConfig = $databaseConfig;
-        $shellCommandHelper = new ShellCommandHelper();
         $this->shellCommandHelper = $shellCommandHelper;
         if (is_null($logger)) {
             $logger = new NullHandler();
@@ -45,43 +50,63 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function isUsable()
+    public function assertIsUsable()
     {
-        $usedFunctions = [
-            'gzip',
-            'gunzip',
-            'mysql',
-            'mysqldump',
-        ];
-        exec('which ' . implode(' &> /dev/null && which ', $usedFunctions) . ' &> /dev/null', $output, $return);
-        return (0 == $return);
+        try {
+            if (!is_callable('exec')) {
+                throw new \Exception('the "exec" function is not callable.');
+            }
+
+            $requiredFunctions = [
+                'gzip',
+                'mysqldump',
+            ];
+            $missingFunctions = [];
+            foreach ($requiredFunctions as $requiredFunction) {
+                exec('which ' . escapeshellarg($requiredFunction) . ' &> /dev/null', $output, $return);
+                if (0 != $return) {
+                    $missingFunctions[] = $requiredFunction;
+                }
+            }
+
+            if ($missingFunctions) {
+                throw new \Exception(
+                    sprintf(
+                        'the "%s" shell function(s) are not available.',
+                        implode('", "', $missingFunctions)
+                    )
+                );
+            }
+        } catch (\Exception $e) {
+            throw new Exception\RuntimeException(sprintf(
+                __CLASS__
+                . ' is not usable in this environment because ' . $e->getMessage()
+            ));
+        }
     }
 
     /**
      * @inheritdoc
      */
-    public function getFileExtension()
+    public function getOptionsHelp()
     {
-        return 'sql.gz';
+        return [
+            self::OPTION_IGNORE_TABLES   => 'An array of table names to ignore data from when exporting.',
+            self::OPTION_REMOVE_DEFINERS => 'A boolean flag for whether to remove definers for triggers. Useful if planning to '
+                . 'import into a separate MySQL instance that does not have the users to match the definers.',
+        ];
     }
 
     /**
-     * @param            $database
-     * @param array      $ignoreTables
-     * @param string     $filename
-     * @param bool       $removeDefiners
-     *
-     * @throws Exception\RuntimeException If command fails
-     * @return string filename
+     * @inheritdoc
      */
     public function exportToFile(
         $database,
-        $filename,
-        array $ignoreTables = [],
-        $removeDefiners = true
+        $path,
+        array $options = []
     ) {
-        $filename = $this->normalizeFilename($filename);
-        $path = dirname($filename);
+        $this->assertIsUsable();
+        $this->validateOptions($options);
         if (!(is_dir($path) && is_writable($path))) {
             throw new Exception\RuntimeException(
                 sprintf(
@@ -90,27 +115,40 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
                 )
             );
         }
+        $path = realpath($path);
 
-        $dumpStructureCommand = $this->getDumpStructureCommand($database, $removeDefiners);
+        $dumpStructureCommand = $this->getDumpStructureCommand($database, $options);
         $dumpDataCommand = 'mysqldump ' . escapeshellarg($database) . ' '
             . $this->getCommandConnectionArguments() . ' '
             . '--single-transaction --quick --lock-tables=false '
             . '--order-by-primary --skip-comments --no-create-db --no-create-info --skip-triggers ';
-        if ($ignoreTables) {
-            foreach ($ignoreTables as $table) {
+        if (!empty($options[self::OPTION_IGNORE_TABLES])) {
+            foreach ($options[self::OPTION_IGNORE_TABLES] as $table) {
                 $dumpDataCommand .= '--ignore-table=' . escapeshellarg("$database.$table") . ' ';
             }
         }
 
         $command = "($dumpStructureCommand && $dumpDataCommand) "
-            . '| gzip -9 > ' . escapeshellarg($filename);
+            . '| gzip -9 > ' . escapeshellarg("$path/$database.sql.gz");
 
         try {
             $this->shellCommandHelper->runShellCommand($command, ShellCommandHelper::PRIORITY_LOW);
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
-        return $filename;
+
+        return "$path/$database.sql.gz";
+    }
+
+    /**
+     * @param LoggerInterface $logger
+     *
+     * @return void
+     */
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->shellCommandHelper->setLogger($logger);
+        $this->logger = $logger;
     }
 
     /**
@@ -133,39 +171,36 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
     }
 
     /**
-     * @param $database
-     * @param $removeDefiners
+     * @param string $database
+     * @param array $options
      *
      * @return string
      */
-    private function getDumpStructureCommand($database, $removeDefiners)
+    private function getDumpStructureCommand($database, $options)
     {
         $dumpStructureCommand = 'mysqldump ' . escapeshellarg($database) . ' '
             . $this->getCommandConnectionArguments() . ' '
             . '--single-transaction --quick --lock-tables=false --skip-comments --no-data --verbose ';
-        if ($removeDefiners) {
+
+        if (!empty($options[self::OPTION_REMOVE_DEFINERS])) {
             $dumpStructureCommand .= '| sed "s/DEFINER=[^*]*\*/\*/g" ';
         }
+
         return $dumpStructureCommand;
     }
 
     /**
-     * @param $filename
+     * @param array $options
      *
-     * @return string
+     * @throws Exception\DomainException If invalid options provided
      */
-    private function normalizeFilename($filename)
+    private function validateOptions(array $options)
     {
-        // Normalize filename
-        if (!preg_match('%^\.{0,2}/%', $filename)) {
-            $filename = './' . $filename;
+        $validOptionKeys = array_keys($this->getOptionsHelp());
+        $invalidOptionKeys = array_diff(array_keys($options), $validOptionKeys);
+        if ($invalidOptionKeys) {
+            throw new Exception\DomainException('Invalid options ' . implode(', ', $invalidOptionKeys) . ' provided.');
         }
-
-        // Normalize file extension
-        $ext = self::getFileExtension();
-        if (".$ext" != substr($filename, -(strlen($ext) + 1))) {
-            $filename .= ".$ext";
-        }
-        return $filename;
     }
+
 }

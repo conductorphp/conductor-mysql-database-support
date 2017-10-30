@@ -49,9 +49,11 @@ class DatabaseMetadataProvider implements DatabaseMetadataProviderInterface
                 WHERE table_schema = :database and TABLE_TYPE='BASE TABLE'
                 ORDER BY TABLE_NAME ASC;";
         $query = $this->connection->prepare($sql);
-        $query->execute([
-            ':database' => $database,
-        ]);
+        $query->execute(
+            [
+                ':database' => $database,
+            ]
+        );
         $tableSizes = [];
         foreach ($query->fetchAll() as $row) {
             $tableSizes[$row['TABLE_NAME']] = [
@@ -62,5 +64,4 @@ class DatabaseMetadataProvider implements DatabaseMetadataProviderInterface
 
         return $tableSizes;
     }
-
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Adapter\Mysqldump;
+namespace DevopsToolMySqlSupport\Adapter\Mydumper;
 
 use DevopsToolCore\Database\DatabaseExportAdapterInterface;
 use DevopsToolCore\Database\DatabaseImportAdapterInterface;
@@ -10,7 +10,7 @@ use DevopsToolMySqlSupport\Adapter\DatabaseConfig;
 use Monolog\Handler\NullHandler;
 use Psr\Log\LoggerInterface;
 
-class MysqldumpImportAdapter //implements DatabaseImportAdapterInterface
+class MydumperImportAdapter implements DatabaseImportAdapterInterface
 {
     /**
      * @var DatabaseConfig
@@ -26,7 +26,7 @@ class MysqldumpImportAdapter //implements DatabaseImportAdapterInterface
     private $logger;
 
     /**
-     * MysqldumpImportAdapter constructor.
+     * MydumperImportAdapter constructor.
      *
      * @param DatabaseConfig       $databaseConfig
      * @param ShellCommandHelper   $shellCommandHelper
@@ -56,8 +56,8 @@ class MysqldumpImportAdapter //implements DatabaseImportAdapterInterface
             }
 
             $requiredFunctions = [
-                'gunzip',
-                'mysql',
+                'tar',
+                'myloader',
             ];
             $missingFunctions = [];
             foreach ($requiredFunctions as $requiredFunction) {
@@ -101,18 +101,16 @@ class MysqldumpImportAdapter //implements DatabaseImportAdapterInterface
     ) {
         $this->assertIsUsable();
         $this->validateOptions($options);
-        $filename = $this->extractAndValidateImportFile($filename);
+        $extractedDir = $this->extractAndValidateImportFile($filename);
 
-        $command = 'mysql ' . escapeshellarg($database) . ' '
-            . $this->getMysqlCommandConnectionArguments()
-            . ' < ' . escapeshellarg($filename);
+        $command = $this->getMyDumperImportCommand($database, $extractedDir, $options);
 
         try {
             $this->shellCommandHelper->runShellCommand($command, ShellCommandHelper::PRIORITY_LOW);
+            $this->shellCommandHelper->runShellCommand('rm -rf ' . escapeshellarg($extractedDir));
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
-        return $filename;
     }
 
     /**
@@ -124,6 +122,15 @@ class MysqldumpImportAdapter //implements DatabaseImportAdapterInterface
         $this->shellCommandHelper->setLogger($logger);
     }
 
+    private function getMyDumperImportCommand($database, $extractedDir, array $options)
+    {
+        $importCommand = 'myloader --database ' . escapeshellarg($database) . ' --directory '
+            . escapeshellarg($extractedDir) . ' -v 3 --overwrite-tables '
+            . $this->getMysqlCommandConnectionArguments();
+
+        return $importCommand;
+    }
+
     /**
      * @return string
      */
@@ -131,7 +138,7 @@ class MysqldumpImportAdapter //implements DatabaseImportAdapterInterface
     {
         if ($this->databaseConfig) {
             $connectionArguments = sprintf(
-                '-h %s -P %s -u %s -p%s ',
+                '-h %s -P %s -u %s -p %s ',
                 escapeshellarg($this->databaseConfig->host),
                 escapeshellarg($this->databaseConfig->port),
                 escapeshellarg($this->databaseConfig->username),
@@ -141,6 +148,32 @@ class MysqldumpImportAdapter //implements DatabaseImportAdapterInterface
             $connectionArguments = '';
         }
         return $connectionArguments;
+    }
+
+    /**
+     * @param string $filename
+     *
+     * @throws Exception\RuntimeException If file extension or format invalid
+     * @return string Extracted directory path
+     */
+    private function extractAndValidateImportFile($filename)
+    {
+        if (0 != strcasecmp('.tgz', substr($filename, -4))) {
+            throw new Exception\RuntimeException('Invalid file extension. Should be .tgz.');
+        }
+
+        $path = realpath(dirname($filename));
+        $this->shellCommandHelper->runShellCommand(
+            'cd ' . escapeshellarg($path)
+            . ' && tar xzf ' . escapeshellarg(basename($filename))
+        );
+        $extractedDir = "$path/" . DatabaseExportAdapterInterface::DEFAULT_WORKING_DIR;
+
+        if (!is_dir($extractedDir)) {
+            throw new Exception\RuntimeException('Provided file is not a database export created by devops database:export.');
+        }
+
+        return $extractedDir;
     }
 
     /**
@@ -154,26 +187,4 @@ class MysqldumpImportAdapter //implements DatabaseImportAdapterInterface
             throw new Exception\DomainException(__CLASS__ . ' does not currently support any options.');
         }
     }
-
-    /**
-     * @param string $filename
-     *
-     * @throws Exception\RuntimeException If file extension or format invalid
-     * @return string Extracted filename
-     */
-    private function extractAndValidateImportFile($filename)
-    {
-        if (0 != strcasecmp('.sql.gz', substr($filename, -7)) && 0 == strcasecmp('.sql', substr($filename, -4))) {
-            throw new Exception\RuntimeException('Invalid file extension. Should be .sql or .sql.gz.');
-        }
-
-        $filename = realpath($filename);
-        // Extract gzip if needed
-        if (0 == strcasecmp('.sql.gz', substr($filename, -7))) {
-            $this->shellCommandHelper->runShellCommand('gunzip ' . escapeshellarg($filename));
-            $filename = substr($filename, 0, strlen($filename) - 3);
-        }
-        return $filename;
-    }
-
 }
