@@ -1,8 +1,6 @@
 <?php
 
 return [
-    'host' => 'localhost',
-    'port' => 3306,
     'export_adapters' => [
         'mydumper' => \DevopsToolMySqlSupport\Adapter\Mydumper\MydumperExportAdapter::class,
         'mysqldump' => \DevopsToolMySqlSupport\Adapter\Mysqldump\MysqldumpExportAdapter::class,

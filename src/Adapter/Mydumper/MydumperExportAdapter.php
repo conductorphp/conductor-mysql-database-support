@@ -26,25 +26,32 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
      * @var LoggerInterface
      */
     private $logger;
+    /**
+     * @var array
+     */
+    private $connectionConfig;
 
     /**
      * MydumperExportAdapter constructor.
      *
-     * @param DatabaseConfig       $databaseConfig
+     * @param array                $connectionConfig
      * @param ShellCommandHelper   $shellCommandHelper
      * @param LoggerInterface|null $logger
+     * @param string|null          $connection
      */
     public function __construct(
-        DatabaseConfig $databaseConfig,
+        array $connectionConfig,
         ShellCommandHelper $shellCommandHelper,
-        LoggerInterface $logger = null
+        LoggerInterface $logger = null,
+        $connection = 'default'
     ) {
-        $this->databaseConfig = $databaseConfig;
+        $this->connectionConfig = $connectionConfig;
         $this->shellCommandHelper = $shellCommandHelper;
         if (is_null($logger)) {
             $logger = new NullHandler();
         }
         $this->logger = $logger;
+        $this->selectConnection($connection);
     }
 
     /**
@@ -134,6 +141,18 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
     }
 
     /**
+     * @inheritdoc
+     */
+    public function selectConnection($name)
+    {
+        if (!isset($this->connectionConfig[$name])) {
+            throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
+        }
+
+        $this->databaseConfig = DatabaseConfig::createFromArray($this->connectionConfig[$name]);
+    }
+
+    /**
      * @param string $database
      * @param string $workingDir
      * @param array  $options
@@ -186,7 +205,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
                 '-h %s -P %s -u %s -p%s ',
                 escapeshellarg($this->databaseConfig->host),
                 escapeshellarg($this->databaseConfig->port),
-                escapeshellarg($this->databaseConfig->username),
+                escapeshellarg($this->databaseConfig->user),
                 escapeshellarg($this->databaseConfig->password)
             );
         } else {
@@ -205,7 +224,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
                 '-h %s -P %s -u %s -p %s ',
                 escapeshellarg($this->databaseConfig->host),
                 escapeshellarg($this->databaseConfig->port),
-                escapeshellarg($this->databaseConfig->username),
+                escapeshellarg($this->databaseConfig->user),
                 escapeshellarg($this->databaseConfig->password)
             );
         } else {

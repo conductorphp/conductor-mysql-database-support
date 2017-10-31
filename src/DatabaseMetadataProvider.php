@@ -3,6 +3,7 @@
 namespace DevopsToolMySqlSupport;
 
 use DevopsToolCore\Database\DatabaseMetadataProviderInterface;
+use DevopsToolMySqlSupport\Adapter\DatabaseConfig;
 
 class DatabaseMetadataProvider implements DatabaseMetadataProviderInterface
 {
@@ -10,10 +11,15 @@ class DatabaseMetadataProvider implements DatabaseMetadataProviderInterface
      * @var \PDO
      */
     private $connection;
+    /**
+     * @var array
+     */
+    private $connectionConfig;
 
-    public function __construct(\PDO $connection)
+    public function __construct(array $connectionConfig, $connection = 'default')
     {
-        $this->connection = $connection;
+        $this->connectionConfig = $connectionConfig;
+        $this->selectConnection($connection);
     }
 
     /**
@@ -63,5 +69,18 @@ class DatabaseMetadataProvider implements DatabaseMetadataProviderInterface
         }
 
         return $tableSizes;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function selectConnection($name)
+    {
+        if (!isset($this->connectionConfig[$name])) {
+            throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
+        }
+
+        $databaseConfig = DatabaseConfig::createFromArray($this->connectionConfig[$name]);
+        $this->connection = new \PDO("mysql:host={$databaseConfig->host};port={$databaseConfig->port}", $databaseConfig->user, $databaseConfig->password);
     }
 }

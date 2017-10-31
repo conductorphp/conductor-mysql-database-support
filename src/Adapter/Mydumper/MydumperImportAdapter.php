@@ -24,25 +24,32 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
      * @var LoggerInterface
      */
     private $logger;
+    /**
+     * @var array
+     */
+    private $connectionConfig;
 
     /**
      * MydumperImportAdapter constructor.
      *
-     * @param DatabaseConfig       $databaseConfig
+     * @param array                $connectionConfig
      * @param ShellCommandHelper   $shellCommandHelper
      * @param LoggerInterface|null $logger
+     * @param string|null          $connection
      */
     public function __construct(
-        DatabaseConfig $databaseConfig,
+        array $connectionConfig,
         ShellCommandHelper $shellCommandHelper,
-        LoggerInterface $logger = null
+        LoggerInterface $logger = null,
+        $connection = 'default'
     ) {
-        $this->databaseConfig = $databaseConfig;
+        $this->connectionConfig = $connectionConfig;
         $this->shellCommandHelper = $shellCommandHelper;
         if (is_null($logger)) {
             $logger = new NullHandler();
         }
         $this->logger = $logger;
+        $this->selectConnection($connection);
     }
 
     /**
@@ -76,10 +83,12 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
                 );
             }
         } catch (\Exception $e) {
-            throw new Exception\RuntimeException(sprintf(
-                __CLASS__
-                . ' is not usable in this environment because ' . $e->getMessage()
-            ));
+            throw new Exception\RuntimeException(
+                sprintf(
+                    __CLASS__
+                    . ' is not usable in this environment because ' . $e->getMessage()
+                )
+            );
         }
     }
 
@@ -122,6 +131,25 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
         $this->shellCommandHelper->setLogger($logger);
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function selectConnection($name)
+    {
+        if (!isset($this->connectionConfig[$name])) {
+            throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
+        }
+
+        $this->databaseConfig = DatabaseConfig::createFromArray($this->connectionConfig[$name]);
+    }
+
+    /**
+     * @param string $database
+     * @param string $extractedDir
+     * @param array  $options
+     *
+     * @return string
+     */
     private function getMyDumperImportCommand($database, $extractedDir, array $options)
     {
         $importCommand = 'myloader --database ' . escapeshellarg($database) . ' --directory '
@@ -141,7 +169,7 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
                 '-h %s -P %s -u %s -p %s ',
                 escapeshellarg($this->databaseConfig->host),
                 escapeshellarg($this->databaseConfig->port),
-                escapeshellarg($this->databaseConfig->username),
+                escapeshellarg($this->databaseConfig->user),
                 escapeshellarg($this->databaseConfig->password)
             );
         } else {
@@ -170,7 +198,9 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
         $extractedDir = "$path/" . DatabaseExportAdapterInterface::DEFAULT_WORKING_DIR;
 
         if (!is_dir($extractedDir)) {
-            throw new Exception\RuntimeException('Provided file is not a database export created by devops database:export.');
+            throw new Exception\RuntimeException(
+                'Provided file is not a database export created by devops database:export.'
+            );
         }
 
         return $extractedDir;

@@ -31,9 +31,8 @@ class MydumperExportAdapterFactory implements FactoryInterface
     public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
         $config = $container->get('config')['database'];
-        $databaseConfig = new DatabaseConfig($config['user'], $config['password'], $config['host'], $config['port']);
         $shellCommandHelper = $container->get(ShellCommandHelper::class);
         $logger = $container->get(LoggerInterface::class);
-        return new MydumperExportAdapter($databaseConfig, $shellCommandHelper, $logger);
+        return new MydumperExportAdapter($config['connections'], $shellCommandHelper, $logger);
     }
 }
