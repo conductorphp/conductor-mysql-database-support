@@ -5,6 +5,7 @@ Robofirm DevOps Tool: MySQL Database Support
 - Removed DI config for \DevopsToolCore\Database\DatabaseMetadataProviderInterface
 - Added DatabaseAdapterFactory
 - Merged DatabaseMetadataProvider into DatabaseAdapter
+- Fixed quoating of db name in dropTableIfExists and added exception on error
 
 # 0.1.0
 - Initial build

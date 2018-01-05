@@ -2,6 +2,7 @@
 
 namespace DevopsToolMySqlSupport\Adapter;
 
+use DevopsToolMySqlSupport\Exception;
 use DevopsToolCore\Database\DatabaseAdapterInterface;
 use PDO;
 
@@ -27,10 +28,14 @@ class DatabaseAdapter implements DatabaseAdapterInterface
 
     /**
      * @param string $name
+     * @throws Exception\RuntimeException If error dropping db
      */
     public function dropDatabaseIfExists($name)
     {
-        $this->databaseConnection->exec("DROP DATABASE IF EXISTS " . $this->databaseConnection->quote($name));
+        $result = $this->databaseConnection->exec("DROP DATABASE IF EXISTS asd" . $this->quoteIdentifier($name));
+        if (!$result) {
+            throw new Exception\RuntimeException('Error dropping database "' . $name . '".');
+        }
     }
 
     /**
@@ -89,5 +94,10 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         }
 
         return $tableSizes;
+    }
+
+    private function quoteIdentifier($identifier)
+    {
+        return '`' . preg_replace('/[^A-Za-z0-9_]+/', '', $identifier) . '`';
     }
 }
