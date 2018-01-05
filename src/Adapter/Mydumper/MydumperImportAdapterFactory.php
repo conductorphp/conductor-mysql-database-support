@@ -4,7 +4,6 @@ namespace DevopsToolMySqlSupport\Adapter\Mydumper;
 
 
 use DevopsToolCore\ShellCommandHelper;
-use DevopsToolMySqlSupport\Adapter\DatabaseConfig;
 use Interop\Container\ContainerInterface;
 use Interop\Container\Exception\ContainerException;
 use Psr\Log\LoggerInterface;

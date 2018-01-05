@@ -50,7 +50,7 @@ class DatabaseConfig
         $invalidKeys = array_diff(array_keys($config), $validKeys);
         if ($invalidKeys) {
             throw new Exception\InvalidArgumentException(
-                'Invalid key(s) "' . implode('", "', $invalidKeys) . '"" provided.'
+                'Invalid key(s) "' . implode('", "', $invalidKeys) . '" provided.'
             );
         }
 

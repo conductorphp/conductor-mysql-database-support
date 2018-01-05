@@ -1,25 +1,45 @@
 <?php
 
-namespace DevopsToolMySqlSupport;
+namespace DevopsToolMySqlSupport\Adapter;
 
-use DevopsToolCore\Database\DatabaseMetadataProviderInterface;
-use DevopsToolMySqlSupport\Adapter\DatabaseConfig;
+use DevopsToolCore\Database\DatabaseAdapterInterface;
+use PDO;
 
-class DatabaseMetadataProvider implements DatabaseMetadataProviderInterface
+class DatabaseAdapter implements DatabaseAdapterInterface
 {
     /**
-     * @var \PDO
+     * @var PDO
      */
-    private $connection;
-    /**
-     * @var array
-     */
-    private $connectionConfig;
+    private $databaseConnection;
 
-    public function __construct(array $connectionConfig, $connection = 'default')
+    public function __construct(
+        $username,
+        $password,
+        $host = 'localhost',
+        $port = 3306
+    ) {
+        $this->databaseConnection = new PDO(
+            "mysql:host={$host};port={$port};charset=UTF8;",
+            $username,
+            $password
+        );
+    }
+
+    /**
+     * @param string $name
+     */
+    public function dropDatabaseIfExists($name)
     {
-        $this->connectionConfig = $connectionConfig;
-        $this->selectConnection($connection);
+        $this->databaseConnection->exec("DROP DATABASE IF EXISTS " . $this->databaseConnection->quote($name));
+    }
+
+    /**
+     *
+     * @return string[]
+     */
+    public function getDatabases()
+    {
+        return $this->databaseConnection->query("SHOW DATABASES")->fetchColumn();
     }
 
     /**
@@ -33,7 +53,7 @@ class DatabaseMetadataProvider implements DatabaseMetadataProviderInterface
                 FROM information_schema.TABLES 
                 GROUP BY table_schema
                 ORDER BY table_schema";
-        $query = $this->connection->prepare($sql);
+        $query = $this->databaseConnection->prepare($sql);
         $query->execute();
         $databases = [];
         foreach ($query->fetchAll() as $row) {
@@ -54,7 +74,7 @@ class DatabaseMetadataProvider implements DatabaseMetadataProviderInterface
                 FROM information_schema.TABLES
                 WHERE table_schema = :database and TABLE_TYPE='BASE TABLE'
                 ORDER BY TABLE_NAME ASC;";
-        $query = $this->connection->prepare($sql);
+        $query = $this->databaseConnection->prepare($sql);
         $query->execute(
             [
                 ':database' => $database,
@@ -69,18 +89,5 @@ class DatabaseMetadataProvider implements DatabaseMetadataProviderInterface
         }
 
         return $tableSizes;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function selectConnection($name)
-    {
-        if (!isset($this->connectionConfig[$name])) {
-            throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
-        }
-
-        $databaseConfig = DatabaseConfig::createFromArray($this->connectionConfig[$name]);
-        $this->connection = new \PDO("mysql:host={$databaseConfig->host};port={$databaseConfig->port}", $databaseConfig->user, $databaseConfig->password);
     }
 }

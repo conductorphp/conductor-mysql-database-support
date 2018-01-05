@@ -4,7 +4,7 @@ namespace DevopsToolMySqlSupport;
 
 return [
     'factories' => [
-        \DevopsToolCore\Database\DatabaseMetadataProviderInterface::class => DatabaseMetaDataProviderFactory::class,
+        Adapter\DatabaseAdapter::class => Adapter\DatabaseAdapterFactory::class,
         Adapter\Mydumper\MydumperExportAdapter::class => Adapter\Mydumper\MydumperExportAdapterFactory::class,
         Adapter\Mydumper\MydumperImportAdapter::class => Adapter\Mydumper\MydumperImportAdapterFactory::class,
         Adapter\Mysqldump\MysqldumpExportAdapter::class => Adapter\Mysqldump\MysqldumpExportAdapterFactory::class,
