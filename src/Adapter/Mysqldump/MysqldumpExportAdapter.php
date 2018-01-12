@@ -43,7 +43,7 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
         array $connectionConfig,
         ShellCommandHelper $shellCommandHelper,
         LoggerInterface $logger = null,
-        $connection = 'default'
+        string $connection = 'default'
     ) {
         $this->connectionConfig = $connectionConfig;
         $this->shellCommandHelper = $shellCommandHelper;
@@ -57,7 +57,7 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function assertIsUsable()
+    public function assertIsUsable(): void
     {
         try {
             if (!is_callable('exec')) {
@@ -97,7 +97,7 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function getOptionsHelp()
+    public function getOptionsHelp(): array
     {
         return [
             self::OPTION_IGNORE_TABLES   => 'An array of table names to ignore data from when exporting.',
@@ -110,10 +110,10 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
      * @inheritdoc
      */
     public function exportToFile(
-        $database,
-        $path,
+        string $database,
+        string $path,
         array $options = []
-    ) {
+    ): string {
         $this->assertIsUsable();
         $this->validateOptions($options);
         if (!(is_dir($path) && is_writable($path))) {
@@ -154,7 +154,7 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
      *
      * @return void
      */
-    public function setLogger(LoggerInterface $logger)
+    public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
         $this->shellCommandHelper->setLogger($logger);
@@ -163,7 +163,7 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function selectConnection($name)
+    public function selectConnection(string $name): void
     {
         if (!isset($this->connectionConfig[$name])) {
             throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
@@ -175,7 +175,7 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @return string
      */
-    private function getCommandConnectionArguments()
+    private function getCommandConnectionArguments(): string
     {
         if ($this->databaseConfig) {
             $connectionArguments = sprintf(
@@ -197,7 +197,7 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
      *
      * @return string
      */
-    private function getDumpStructureCommand($database, $options)
+    private function getDumpStructureCommand(string $database, array $options): string
     {
         $dumpStructureCommand = 'mysqldump ' . escapeshellarg($database) . ' '
             . $this->getCommandConnectionArguments() . ' '
@@ -215,7 +215,7 @@ class MysqldumpExportAdapter implements DatabaseExportAdapterInterface
      *
      * @throws Exception\DomainException If invalid options provided
      */
-    private function validateOptions(array $options)
+    private function validateOptions(array $options): void
     {
         $validOptionKeys = array_keys($this->getOptionsHelp());
         $invalidOptionKeys = array_diff(array_keys($options), $validOptionKeys);

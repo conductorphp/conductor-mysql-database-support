@@ -1,6 +1,9 @@
 Robofirm DevOps Tool: MySQL Database Support
 ============================================
 
+# 0.2.0 (Unreleased)
+- Updated PHP version requirement to 7.1
+
 # 0.1.1
 - Removed DI config for \DevopsToolCore\Database\DatabaseMetadataProviderInterface
 - Added DatabaseAdapterFactory

@@ -41,7 +41,7 @@ class MysqldumpImportAdapter implements DatabaseImportAdapterInterface
         array $connectionConfig,
         ShellCommandHelper $shellCommandHelper,
         LoggerInterface $logger = null,
-        $connection = 'default'
+        string $connection = 'default'
     ) {
         $this->connectionConfig = $connectionConfig;
         $this->shellCommandHelper = $shellCommandHelper;
@@ -55,7 +55,7 @@ class MysqldumpImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function assertIsUsable()
+    public function assertIsUsable(): void
     {
         try {
             if (!is_callable('exec')) {
@@ -93,7 +93,7 @@ class MysqldumpImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function getOptionsHelp()
+    public function getOptionsHelp(): array
     {
         return [];
     }
@@ -102,10 +102,10 @@ class MysqldumpImportAdapter implements DatabaseImportAdapterInterface
      * @inheritdoc
      */
     public function importFromFile(
-        $filename,
-        $database,
+        string $filename,
+        string $database,
         array $options = []
-    ) {
+    ): void {
         $this->assertIsUsable();
         $this->validateOptions($options);
         $filename = $this->extractAndValidateImportFile($filename);
@@ -119,13 +119,12 @@ class MysqldumpImportAdapter implements DatabaseImportAdapterInterface
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
-        return $filename;
     }
 
     /**
      * @inheritdoc
      */
-    public function setLogger(LoggerInterface $logger)
+    public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
         $this->shellCommandHelper->setLogger($logger);
@@ -134,7 +133,7 @@ class MysqldumpImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function selectConnection($name)
+    public function selectConnection(string $name): void
     {
         if (!isset($this->connectionConfig[$name])) {
             throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
@@ -146,7 +145,7 @@ class MysqldumpImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @return string
      */
-    private function getMysqlCommandConnectionArguments()
+    private function getMysqlCommandConnectionArguments(): string
     {
         if ($this->databaseConfig) {
             $connectionArguments = sprintf(
@@ -167,7 +166,7 @@ class MysqldumpImportAdapter implements DatabaseImportAdapterInterface
      *
      * @throws Exception\DomainException If invalid options provided
      */
-    private function validateOptions(array $options)
+    private function validateOptions(array $options): void
     {
         if ($options) {
             throw new Exception\DomainException(__CLASS__ . ' does not currently support any options.');
@@ -180,7 +179,7 @@ class MysqldumpImportAdapter implements DatabaseImportAdapterInterface
      * @throws Exception\RuntimeException If file extension or format invalid
      * @return string Extracted filename
      */
-    private function extractAndValidateImportFile($filename)
+    private function extractAndValidateImportFile(string $filename): string
     {
         if (0 != strcasecmp('.sql.gz', substr($filename, -7)) && 0 == strcasecmp('.sql', substr($filename, -4))) {
             throw new Exception\RuntimeException('Invalid file extension. Should be .sql or .sql.gz.');

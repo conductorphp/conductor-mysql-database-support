@@ -41,7 +41,7 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
         array $connectionConfig,
         ShellCommandHelper $shellCommandHelper,
         LoggerInterface $logger = null,
-        $connection = 'default'
+        string $connection = 'default'
     ) {
         $this->connectionConfig = $connectionConfig;
         $this->shellCommandHelper = $shellCommandHelper;
@@ -55,7 +55,7 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function assertIsUsable()
+    public function assertIsUsable(): void
     {
         try {
             if (!is_callable('exec')) {
@@ -96,7 +96,7 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function getOptionsHelp()
+    public function getOptionsHelp(): array
     {
         return [];
     }
@@ -105,15 +105,15 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
      * @inheritdoc
      */
     public function importFromFile(
-        $filename,
-        $database,
+        string $filename,
+        string $database,
         array $options = []
-    ) {
+    ): void {
         $this->assertIsUsable();
         $this->validateOptions($options);
         $extractedDir = $this->extractAndValidateImportFile($filename);
 
-        $command = $this->getTabDelimitedFileImportCommand($database, $extractedDir, $options);
+        $command = $this->getTabDelimitedFileImportCommand($database, $extractedDir);
 
         try {
             $this->shellCommandHelper->runShellCommand($command, ShellCommandHelper::PRIORITY_LOW);
@@ -121,13 +121,12 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
-        return $filename;
     }
 
     /**
      * @inheritdoc
      */
-    public function setLogger(LoggerInterface $logger)
+    public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
         $this->shellCommandHelper->setLogger($logger);
@@ -136,7 +135,7 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function selectConnection($name)
+    public function selectConnection(string $name): void
     {
         if (!isset($this->connectionConfig[$name])) {
             throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
@@ -145,7 +144,13 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
         $this->databaseConfig = DatabaseConfig::createFromArray($this->connectionConfig[$name]);
     }
 
-    private function getTabDelimitedFileImportCommand($database, $extractedDir, array $options)
+    /**
+     * @param string $database
+     * @param string $extractedDir
+     *
+     * @return string
+     */
+    private function getTabDelimitedFileImportCommand(string $database, string $extractedDir): string
     {
         $importSchemaCommand = 'mysql ' . escapeshellarg($database) . ' '
             . $this->getMysqlCommandConnectionArguments() . ' '
@@ -162,7 +167,7 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @return string
      */
-    private function getMysqlCommandConnectionArguments()
+    private function getMysqlCommandConnectionArguments(): string
     {
         if ($this->databaseConfig) {
             $connectionArguments = sprintf(
@@ -184,7 +189,7 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
      * @throws Exception\RuntimeException If file extension or format invalid
      * @return string Extracted directory path
      */
-    private function extractAndValidateImportFile($filename)
+    private function extractAndValidateImportFile(string $filename): string
     {
         if (0 != strcasecmp('.tgz', substr($filename, -4))) {
             throw new Exception\RuntimeException('Invalid file extension. Should be .tgz.');
@@ -211,7 +216,7 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
      *
      * @throws Exception\DomainException If invalid options provided
      */
-    private function validateOptions(array $options)
+    private function validateOptions(array $options): void
     {
         if ($options) {
             throw new Exception\DomainException(__CLASS__ . ' does not currently support any options.');

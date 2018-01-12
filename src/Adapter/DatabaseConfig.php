@@ -26,12 +26,12 @@ class DatabaseConfig
     /**
      * DatabaseConfig constructor.
      *
-     * @param        $username
-     * @param        $password
+     * @param string $username
+     * @param string $password
      * @param string $host
      * @param int    $port
      */
-    public function __construct($username, $password, $host = 'localhost', $port = 3306)
+    public function __construct(string $username, string $password, string $host = 'localhost', int $port = 3306)
     {
         $this->user = $username;
         $this->password = $password;
@@ -44,7 +44,7 @@ class DatabaseConfig
      *
      * @return DatabaseConfig
      */
-    public static function createFromArray(array $config)
+    public static function createFromArray(array $config): self
     {
         $validKeys = ['user', 'password', 'host', 'port'];
         $invalidKeys = array_diff(array_keys($config), $validKeys);

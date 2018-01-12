@@ -25,7 +25,7 @@ class ConfigProvider
      *
      * @return array
      */
-    private function getDependencies()
+    private function getDependencies(): array
     {
         return require(__DIR__ . '/../config/dependencies.php');
     }
@@ -35,7 +35,7 @@ class ConfigProvider
      *
      * @return array
      */
-    private function getDatabaseConfig()
+    private function getDatabaseConfig(): array
     {
         return require(__DIR__ . '/../config/database.php');
     }

@@ -42,7 +42,7 @@ class DatabaseAdapterFactory implements FactoryInterface
      *
      * @throws Exception\InvalidArgumentException if options are invalid
      */
-    private function validateOptions(array $options)
+    private function validateOptions(array $options): void
     {
         $requiredOptions = ['username', 'password'];
         $allowedOptions = ['username', 'password', 'host', 'port'];

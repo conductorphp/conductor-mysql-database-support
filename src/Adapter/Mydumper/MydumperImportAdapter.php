@@ -41,7 +41,7 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
         array $connectionConfig,
         ShellCommandHelper $shellCommandHelper,
         LoggerInterface $logger = null,
-        $connection = 'default'
+        string $connection = 'default'
     ) {
         $this->connectionConfig = $connectionConfig;
         $this->shellCommandHelper = $shellCommandHelper;
@@ -55,7 +55,7 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function assertIsUsable()
+    public function assertIsUsable(): void
     {
         try {
             if (!is_callable('exec')) {
@@ -95,7 +95,7 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function getOptionsHelp()
+    public function getOptionsHelp(): array
     {
         return [];
     }
@@ -104,15 +104,15 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
      * @inheritdoc
      */
     public function importFromFile(
-        $filename,
-        $database,
+        string $filename,
+        string $database,
         array $options = []
-    ) {
+    ): void {
         $this->assertIsUsable();
         $this->validateOptions($options);
         $extractedDir = $this->extractAndValidateImportFile($filename);
 
-        $command = $this->getMyDumperImportCommand($database, $extractedDir, $options);
+        $command = $this->getMyDumperImportCommand($database, $extractedDir);
 
         try {
             $this->shellCommandHelper->runShellCommand($command, ShellCommandHelper::PRIORITY_LOW);
@@ -125,7 +125,7 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function setLogger(LoggerInterface $logger)
+    public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
         $this->shellCommandHelper->setLogger($logger);
@@ -134,7 +134,7 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function selectConnection($name)
+    public function selectConnection(string $name): void
     {
         if (!isset($this->connectionConfig[$name])) {
             throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
@@ -146,11 +146,10 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @param string $database
      * @param string $extractedDir
-     * @param array  $options
      *
      * @return string
      */
-    private function getMyDumperImportCommand($database, $extractedDir, array $options)
+    private function getMyDumperImportCommand(string $database, string $extractedDir): string
     {
         $importCommand = 'myloader --database ' . escapeshellarg($database) . ' --directory '
             . escapeshellarg($extractedDir) . ' -v 3 --overwrite-tables '
@@ -162,7 +161,7 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @return string
      */
-    private function getMysqlCommandConnectionArguments()
+    private function getMysqlCommandConnectionArguments(): string
     {
         if ($this->databaseConfig) {
             $connectionArguments = sprintf(
@@ -184,7 +183,7 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
      * @throws Exception\RuntimeException If file extension or format invalid
      * @return string Extracted directory path
      */
-    private function extractAndValidateImportFile($filename)
+    private function extractAndValidateImportFile(string $filename): string
     {
         if (0 != strcasecmp('.tgz', substr($filename, -4))) {
             throw new Exception\RuntimeException('Invalid file extension. Should be .tgz.');
@@ -211,7 +210,7 @@ class MydumperImportAdapter implements DatabaseImportAdapterInterface
      *
      * @throws Exception\DomainException If invalid options provided
      */
-    private function validateOptions(array $options)
+    private function validateOptions(array $options): void
     {
         if ($options) {
             throw new Exception\DomainException(__CLASS__ . ' does not currently support any options.');

@@ -37,13 +37,13 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
      * @param array                $connectionConfig
      * @param ShellCommandHelper   $shellCommandHelper
      * @param LoggerInterface|null $logger
-     * @param string|null          $connection
+     * @param string          $connection
      */
     public function __construct(
         array $connectionConfig,
         ShellCommandHelper $shellCommandHelper,
         LoggerInterface $logger = null,
-        $connection = 'default'
+        string $connection = 'default'
     ) {
         $this->connectionConfig = $connectionConfig;
         $this->shellCommandHelper = $shellCommandHelper;
@@ -57,7 +57,7 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function assertIsUsable()
+    public function assertIsUsable(): void
     {
         try {
             if (!is_callable('exec')) {
@@ -98,7 +98,7 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function getOptionsHelp()
+    public function getOptionsHelp(): array
     {
         return [
             self::OPTION_IGNORE_TABLES   => 'An array of table names to ignore data from when exporting.',
@@ -111,10 +111,10 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
      * @inheritdoc
      */
     public function exportToFile(
-        $database,
-        $path,
+        string $database,
+        string $path,
         array $options = []
-    ) {
+    ): string {
         $this->assertIsUsable();
         $this->validateOptions($options);
         $workingDir = $this->prepareWorkingDirectory($path);
@@ -139,7 +139,7 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function setLogger(LoggerInterface $logger)
+    public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
         $this->shellCommandHelper->setLogger($logger);
@@ -148,7 +148,7 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function selectConnection($name)
+    public function selectConnection(string $name): void
     {
         if (!isset($this->connectionConfig[$name])) {
             throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
@@ -165,10 +165,10 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
      * @return string
      */
     private function getTabDelimitedFileExportCommand(
-        $database,
-        $workingDir,
+        string $database,
+        string $workingDir,
         array $options
-    ) {
+    ): string {
         $dumpStructureCommand = $this->getDumpStructureCommand($database, $options)
             . '> ' . escapeshellarg("$workingDir/schema.sql");
 
@@ -227,7 +227,7 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @return string
      */
-    private function getMysqlCommandConnectionArguments()
+    private function getMysqlCommandConnectionArguments(): string
     {
         if ($this->databaseConfig) {
             $connectionArguments = sprintf(
@@ -244,12 +244,12 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
     }
 
     /**
-     * @param       $database
-     * @param array $options
+     * @param string $database
+     * @param array  $options
      *
      * @return string
      */
-    private function getDumpStructureCommand($database, array $options)
+    private function getDumpStructureCommand(string $database, array $options): string
     {
         $dumpStructureCommand = 'mysqldump ' . escapeshellarg($database) . ' '
             . $this->getMysqlCommandConnectionArguments() . ' '
@@ -268,7 +268,7 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
      * @throws Exception\RuntimeException If path is not writable
      * @return string Working directory
      */
-    private function prepareWorkingDirectory($path)
+    private function prepareWorkingDirectory(string $path): string
     {
         if (!(is_dir($path) && is_writable($path))) {
             throw new Exception\RuntimeException(
@@ -291,7 +291,7 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
      *
      * @throws Exception\DomainException If invalid options provided
      */
-    private function validateOptions(array $options)
+    private function validateOptions(array $options): void
     {
         $validOptionKeys = array_keys($this->getOptionsHelp());
         $invalidOptionKeys = array_diff(array_keys($options), $validOptionKeys);
@@ -306,7 +306,7 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
      *
      * @return array
      */
-    private function getDataTables($database, $options)
+    private function getDataTables(string $database, array $options): array
     {
         $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
             . $this->getMysqlCommandConnectionArguments() . ' ';

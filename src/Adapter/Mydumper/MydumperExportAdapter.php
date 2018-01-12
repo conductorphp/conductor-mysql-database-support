@@ -43,7 +43,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
         array $connectionConfig,
         ShellCommandHelper $shellCommandHelper,
         LoggerInterface $logger = null,
-        $connection = 'default'
+        string $connection = 'default'
     ) {
         $this->connectionConfig = $connectionConfig;
         $this->shellCommandHelper = $shellCommandHelper;
@@ -57,7 +57,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function assertIsUsable()
+    public function assertIsUsable(): void
     {
         try {
             if (!is_callable('exec')) {
@@ -97,7 +97,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function getOptionsHelp()
+    public function getOptionsHelp(): array
     {
         return [
             self::OPTION_IGNORE_TABLES   => 'An array of table names to ignore data from when exporting.',
@@ -110,10 +110,10 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
      * @inheritdoc
      */
     public function exportToFile(
-        $database,
-        $path,
+        string $database,
+        string $path,
         array $options = []
-    ) {
+    ): string {
         $this->assertIsUsable();
         $this->validateOptions($options);
         $workingDir = $this->prepareWorkingDirectory($path);
@@ -134,7 +134,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function setLogger(LoggerInterface $logger)
+    public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
         $this->shellCommandHelper->setLogger($logger);
@@ -143,7 +143,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function selectConnection($name)
+    public function selectConnection(string $name): void
     {
         if (!isset($this->connectionConfig[$name])) {
             throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
@@ -159,7 +159,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
      *
      * @return string
      */
-    private function getMyDumperExportCommand($database, $workingDir, $options)
+    private function getMyDumperExportCommand(string $database, string $workingDir, array $options): string
     {
         # find command has a bug where it will fail if you do not have read permissions to the current working directory
         # Temporarily switching into the working directory while running this command.
@@ -198,7 +198,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @return string
      */
-    private function getMysqlCommandConnectionArguments()
+    private function getMysqlCommandConnectionArguments(): string
     {
         if ($this->databaseConfig) {
             $connectionArguments = sprintf(
@@ -217,7 +217,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @return string
      */
-    private function getMysqldumperCommandConnectionArguments()
+    private function getMysqldumperCommandConnectionArguments(): string
     {
         if ($this->databaseConfig) {
             $connectionArguments = sprintf(
@@ -239,7 +239,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
      * @throws Exception\RuntimeException If path is not writable
      * @return string Working directory
      */
-    private function prepareWorkingDirectory($path)
+    private function prepareWorkingDirectory(string $path): string
     {
         if (!(is_dir($path) && is_writable($path))) {
             throw new Exception\RuntimeException(
@@ -262,7 +262,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
      *
      * @throws Exception\DomainException If invalid options provided
      */
-    private function validateOptions(array $options)
+    private function validateOptions(array $options): void
     {
         $validOptionKeys = array_keys($this->getOptionsHelp());
         $invalidOptionKeys = array_diff(array_keys($options), $validOptionKeys);
@@ -277,7 +277,7 @@ class MydumperExportAdapter implements DatabaseExportAdapterInterface
      *
      * @return array
      */
-    private function getDataTables($database, $options)
+    private function getDataTables(string $database, array $options): array
     {
         $dataTables = [];
         if (!empty($options[self::OPTION_IGNORE_TABLES])) {

@@ -14,10 +14,10 @@ class DatabaseAdapter implements DatabaseAdapterInterface
     private $databaseConnection;
 
     public function __construct(
-        $username,
-        $password,
-        $host = 'localhost',
-        $port = 3306
+        string $username,
+        string $password,
+        string $host = 'localhost',
+        int $port = 3306
     ) {
         $this->databaseConnection = new PDO(
             "mysql:host={$host};port={$port};charset=UTF8;",
@@ -30,7 +30,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      * @param string $name
      * @throws Exception\RuntimeException If error dropping db
      */
-    public function dropDatabaseIfExists($name)
+    public function dropDatabaseIfExists(string $name): void
     {
         $result = $this->databaseConnection->exec("DROP DATABASE IF EXISTS asd" . $this->quoteIdentifier($name));
         if (!$result) {
@@ -42,15 +42,15 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      *
      * @return string[]
      */
-    public function getDatabases()
+    public function getDatabases(): array
     {
         return $this->databaseConnection->query("SHOW DATABASES")->fetchColumn();
     }
 
     /**
-     * @inheritdoc
+     * @return array
      */
-    public function getDatabaseMetadata()
+    public function getDatabaseMetadata(): array
     {
         $sql
             = "SELECT table_schema AS \"database\", 
@@ -70,9 +70,11 @@ class DatabaseAdapter implements DatabaseAdapterInterface
     }
 
     /**
-     * @inheritdoc
+     * @param string $database
+     *
+     * @return array
      */
-    public function getTableMetadata($database)
+    public function getTableMetadata(string $database): array
     {
         $sql
             = "SELECT TABLE_NAME, table_rows, (data_length + index_length) 'size'
@@ -96,7 +98,12 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         return $tableSizes;
     }
 
-    private function quoteIdentifier($identifier)
+    /**
+     * @param string $identifier
+     *
+     * @return string
+     */
+    private function quoteIdentifier(string $identifier): string
     {
         return '`' . preg_replace('/[^A-Za-z0-9_]+/', '', $identifier) . '`';
     }
