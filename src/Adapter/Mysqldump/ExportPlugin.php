@@ -2,6 +2,7 @@
 
 namespace DevopsToolMySqlSupport\Adapter\Mysqldump;
 
+use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
 use DevopsToolCore\Exception;
 use DevopsToolCore\ShellCommandHelper;
 use Psr\Log\LoggerInterface;
@@ -108,6 +109,10 @@ class ExportPlugin
         string $path,
         array $options = []
     ): string {
+        $workingDir = $this->prepareWorkingDirectory($path);
+        $filename = "$workingDir/$database.sql.gz";
+        $this->logger->info("Exporting database $database to file $filename");
+
         $this->assertIsUsable();
         $this->validateOptions($options);
         if (!(is_dir($path) && is_writable($path))) {
@@ -140,7 +145,31 @@ class ExportPlugin
             throw new Exception\RuntimeException($e->getMessage());
         }
 
-        return "$path/$database.sql.gz";
+        return $filename;
+    }
+
+    /**
+     * @param string $path
+     *
+     * @throws Exception\RuntimeException If path is not writable
+     * @return string Working directory
+     */
+    private function prepareWorkingDirectory(string $path): string
+    {
+        if (!(is_dir($path) && is_writable($path))) {
+            throw new Exception\RuntimeException(
+                sprintf(
+                    'Path "%s" is not a writable directory.',
+                    $path
+                )
+            );
+        }
+
+        $workingDir = realpath($path) . '/' . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
+        if (!is_dir($workingDir)) {
+            mkdir($workingDir);
+        }
+        return $workingDir;
     }
 
     /**

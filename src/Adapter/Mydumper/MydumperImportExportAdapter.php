@@ -5,10 +5,11 @@ namespace DevopsToolMySqlSupport\Adapter\Mydumper;
 use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
 use DevopsToolCore\Exception;
 use DevopsToolCore\ShellCommandHelper;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterface
+class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterface, LoggerAwareInterface
 {
     /**
      * @var ImportPlugin
@@ -67,6 +68,14 @@ class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterfac
         array $options = []
     ): string {
         return $this->exportPlugin->exportToFile($database, $path, $options);
+    }
+
+    /**
+     * @return string
+     */
+    public static function getFileExtension(): string
+    {
+        return 'tgz';
     }
 
     /**

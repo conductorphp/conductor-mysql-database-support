@@ -105,6 +105,7 @@ class ImportPlugin
         string $database,
         array $options = []
     ): void {
+        $this->logger->info("Importing file $filename into database $database");
         $this->assertIsUsable();
         $this->validateOptions($options);
         $filename = $this->extractAndValidateImportFile($filename);

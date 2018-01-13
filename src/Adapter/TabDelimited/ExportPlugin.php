@@ -111,9 +111,11 @@ class ExportPlugin
         string $path,
         array $options = []
     ): string {
+        $workingDir = $this->prepareWorkingDirectory($path);
+        $filename = "$workingDir/$database.tgz";
+        $this->logger->info("Exporting database $database to file $filename");
         $this->assertIsUsable();
         $this->validateOptions($options);
-        $workingDir = $this->prepareWorkingDirectory($path);
 
         $command = $this->getTabDelimitedFileExportCommand(
             $database,
@@ -129,7 +131,7 @@ class ExportPlugin
             throw new Exception\RuntimeException($e->getMessage());
         }
 
-        return realpath($path) . "/$database.tgz";
+        return $filename;
     }
 
     /**

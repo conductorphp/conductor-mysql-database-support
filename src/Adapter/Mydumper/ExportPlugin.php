@@ -69,9 +69,12 @@ class ExportPlugin
         string $path,
         array $options = []
     ): string {
+        $workingDir = $this->prepareWorkingDirectory($path);
+        $filename = "$workingDir/$database.tgz";
+        $this->logger->info("Exporting database $database to file $filename");
+
         $this->assertIsUsable();
         $this->validateOptions($options);
-        $workingDir = $this->prepareWorkingDirectory($path);
 
         $command = $this->getMyDumperExportCommand($database, $workingDir, $options);
 

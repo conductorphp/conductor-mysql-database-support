@@ -2,14 +2,14 @@
 
 namespace DevopsToolMySqlSupport\Adapter\TabDelimited;
 
-use DevopsToolCore\Database\DatabaseExportAdapterInterface;
 use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
 use DevopsToolCore\Exception;
 use DevopsToolCore\ShellCommandHelper;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInterface
+class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInterface, LoggerAwareInterface
 {
     /**
      * @var ImportPlugin
@@ -68,6 +68,14 @@ class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInte
         array $options = []
     ): string {
         return $this->exportPlugin->exportToFile($database, $path, $options);
+    }
+
+    /**
+     * @return string
+     */
+    public static function getFileExtension(): string
+    {
+        return 'tgz';
     }
 
     /**
