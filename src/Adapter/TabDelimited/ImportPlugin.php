@@ -2,54 +2,60 @@
 
 namespace DevopsToolMySqlSupport\Adapter\TabDelimited;
 
-use DevopsToolCore\Database\DatabaseExportAdapterInterface;
-use DevopsToolCore\Database\DatabaseImportAdapterInterface;
+use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
 use DevopsToolCore\Exception;
 use DevopsToolCore\ShellCommandHelper;
-use DevopsToolMySqlSupport\Adapter\DatabaseConfig;
-use Monolog\Handler\NullHandler;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
-class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
+class ImportPlugin
 {
     /**
-     * @var DatabaseConfig
+     * @var string
      */
-    private $databaseConfig;
+    private $username;
+    /**
+     * @var string
+     */
+    private $password;
+    /**
+     * @var string
+     */
+    private $host;
+    /**
+     * @var int
+     */
+    private $port;
     /**
      * @var ShellCommandHelper
      */
     private $shellCommandHelper;
     /**
-     * @var LoggerInterface
+     * @var null|LoggerInterface
      */
     private $logger;
-    /**
-     * @var array
-     */
-    private $connectionConfig;
 
-    /**
-     * MydumperExportAdapter constructor.
-     *
-     * @param array                $connectionConfig
-     * @param ShellCommandHelper   $shellCommandHelper
-     * @param LoggerInterface|null $logger
-     * @param string|null          $connection
-     */
+
     public function __construct(
-        array $connectionConfig,
-        ShellCommandHelper $shellCommandHelper,
-        LoggerInterface $logger = null,
-        string $connection = 'default'
+        string $username,
+        string $password,
+        string $host = 'localhost',
+        int $port = 3306,
+        ShellCommandHelper $shellCommandHelper = null,
+        LoggerInterface $logger = null
     ) {
-        $this->connectionConfig = $connectionConfig;
-        $this->shellCommandHelper = $shellCommandHelper;
         if (is_null($logger)) {
-            $logger = new NullHandler();
+            $logger = new NullLogger();
         }
+        if (is_null($shellCommandHelper)) {
+            $shellCommandHelper = new ShellCommandHelper($logger);
+        }
+        $this->username = $username;
+        $this->password = $password;
+        $this->host = $host;
+        $this->port = $port;
+        $this->shellCommandHelper = $shellCommandHelper;
         $this->logger = $logger;
-        $this->selectConnection($connection);
     }
 
     /**
@@ -96,14 +102,6 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function getOptionsHelp(): array
-    {
-        return [];
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function importFromFile(
         string $filename,
         string $database,
@@ -128,20 +126,8 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
      */
     public function setLogger(LoggerInterface $logger): void
     {
-        $this->logger = $logger;
         $this->shellCommandHelper->setLogger($logger);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function selectConnection(string $name): void
-    {
-        if (!isset($this->connectionConfig[$name])) {
-            throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
-        }
-
-        $this->databaseConfig = DatabaseConfig::createFromArray($this->connectionConfig[$name]);
+        $this->logger = $logger;
     }
 
     /**
@@ -157,11 +143,17 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
             . "< $extractedDir/schema.sql";
 
         $dataFiles = glob("$extractedDir/*.txt");
-        $importDataCommand = 'mysqlimport ' . escapeshellarg($database) . ' --local --verbose '
-            . $this->getMysqlCommandConnectionArguments() . ' '
-            . implode(' ', $dataFiles);
+        if ($dataFiles) {
+            $importDataCommand = 'mysqlimport ' . escapeshellarg($database) . ' --local --verbose '
+                . $this->getMysqlCommandConnectionArguments() . ' '
+                . implode(' ', $dataFiles);
+        }
 
-        return "$importSchemaCommand && $importDataCommand";
+        $command = $importSchemaCommand;
+        if (!empty($importDataCommand)) {
+            $command .= " && $importDataCommand";
+        }
+        return $command;
     }
 
     /**
@@ -169,18 +161,13 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
      */
     private function getMysqlCommandConnectionArguments(): string
     {
-        if ($this->databaseConfig) {
-            $connectionArguments = sprintf(
-                '-h %s -P %s -u %s -p%s ',
-                escapeshellarg($this->databaseConfig->host),
-                escapeshellarg($this->databaseConfig->port),
-                escapeshellarg($this->databaseConfig->user),
-                escapeshellarg($this->databaseConfig->password)
-            );
-        } else {
-            $connectionArguments = '';
-        }
-        return $connectionArguments;
+        return sprintf(
+            '-h %s -P %s -u %s -p%s ',
+            escapeshellarg($this->host),
+            escapeshellarg($this->port),
+            escapeshellarg($this->username),
+            escapeshellarg($this->password)
+        );
     }
 
     /**
@@ -200,7 +187,7 @@ class MysqlTabDelimitedImportAdapter implements DatabaseImportAdapterInterface
             'cd ' . escapeshellarg($path)
             . ' && tar xzf ' . escapeshellarg(basename($filename))
         );
-        $extractedDir = "$path/" . DatabaseExportAdapterInterface::DEFAULT_WORKING_DIR;
+        $extractedDir = "$path/" . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
 
         if (!is_dir($extractedDir)) {
             throw new Exception\RuntimeException(

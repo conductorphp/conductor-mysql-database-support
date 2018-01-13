@@ -2,56 +2,64 @@
 
 namespace DevopsToolMySqlSupport\Adapter\TabDelimited;
 
-use DevopsToolCore\Database\DatabaseExportAdapterInterface;
+use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
 use DevopsToolCore\Exception;
 use DevopsToolCore\ShellCommandHelper;
 use DevopsToolMySqlSupport\Adapter\DatabaseConfig;
-use Monolog\Handler\NullHandler;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
-class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
+class ExportPlugin
 {
     const OPTION_IGNORE_TABLES = 'ignore_tables';
     const OPTION_REMOVE_DEFINERS = 'remove_definers';
 
     /**
-     * @var DatabaseConfig
+     * @var string
      */
-    private $databaseConfig;
+    private $username;
+    /**
+     * @var string
+     */
+    private $password;
+    /**
+     * @var string
+     */
+    private $host;
+    /**
+     * @var int
+     */
+    private $port;
     /**
      * @var ShellCommandHelper
      */
     private $shellCommandHelper;
     /**
-     * @var LoggerInterface
+     * @var null|LoggerInterface
      */
     private $logger;
-    /**
-     * @var array
-     */
-    private $connectionConfig;
 
-    /**
-     * MydumperExportAdapter constructor.
-     *
-     * @param array                $connectionConfig
-     * @param ShellCommandHelper   $shellCommandHelper
-     * @param LoggerInterface|null $logger
-     * @param string          $connection
-     */
+
     public function __construct(
-        array $connectionConfig,
-        ShellCommandHelper $shellCommandHelper,
-        LoggerInterface $logger = null,
-        string $connection = 'default'
+        string $username,
+        string $password,
+        string $host = 'localhost',
+        int $port = 3306,
+        ShellCommandHelper $shellCommandHelper = null,
+        LoggerInterface $logger = null
     ) {
-        $this->connectionConfig = $connectionConfig;
-        $this->shellCommandHelper = $shellCommandHelper;
         if (is_null($logger)) {
-            $logger = new NullHandler();
+            $logger = new NullLogger();
         }
+        if (is_null($shellCommandHelper)) {
+            $shellCommandHelper = new ShellCommandHelper($logger);
+        }
+        $this->username = $username;
+        $this->password = $password;
+        $this->host = $host;
+        $this->port = $port;
+        $this->shellCommandHelper = $shellCommandHelper;
         $this->logger = $logger;
-        $this->selectConnection($connection);
     }
 
     /**
@@ -98,18 +106,6 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
     /**
      * @inheritdoc
      */
-    public function getOptionsHelp(): array
-    {
-        return [
-            self::OPTION_IGNORE_TABLES   => 'An array of table names to ignore data from when exporting.',
-            self::OPTION_REMOVE_DEFINERS => 'A boolean flag for whether to remove definers for triggers. Useful if planning to '
-                . 'import into a separate MySQL instance that does not have the users to match the definers.',
-        ];
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function exportToFile(
         string $database,
         string $path,
@@ -141,20 +137,8 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
      */
     public function setLogger(LoggerInterface $logger): void
     {
-        $this->logger = $logger;
         $this->shellCommandHelper->setLogger($logger);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function selectConnection(string $name): void
-    {
-        if (!isset($this->connectionConfig[$name])) {
-            throw new Exception\DomainException("Connection \"$name\" not provided in connection configuration.");
-        }
-
-        $this->databaseConfig = DatabaseConfig::createFromArray($this->connectionConfig[$name]);
+        $this->logger = $logger;
     }
 
     /**
@@ -229,18 +213,13 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
      */
     private function getMysqlCommandConnectionArguments(): string
     {
-        if ($this->databaseConfig) {
-            $connectionArguments = sprintf(
-                '-h %s -P %s -u %s -p%s ',
-                escapeshellarg($this->databaseConfig->host),
-                escapeshellarg($this->databaseConfig->port),
-                escapeshellarg($this->databaseConfig->user),
-                escapeshellarg($this->databaseConfig->password)
-            );
-        } else {
-            $connectionArguments = '';
-        }
-        return $connectionArguments;
+        return sprintf(
+            '-h %s -P %s -u %s -p%s ',
+            escapeshellarg($this->host),
+            escapeshellarg($this->port),
+            escapeshellarg($this->username),
+            escapeshellarg($this->password)
+        );
     }
 
     /**
@@ -279,7 +258,7 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
             );
         }
 
-        $workingDir = realpath($path) . '/' . DatabaseExportAdapterInterface::DEFAULT_WORKING_DIR;
+        $workingDir = realpath($path) . '/' . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
         if (!is_dir($workingDir)) {
             mkdir($workingDir);
         }
@@ -293,7 +272,7 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
      */
     private function validateOptions(array $options): void
     {
-        $validOptionKeys = array_keys($this->getOptionsHelp());
+        $validOptionKeys = [self::OPTION_REMOVE_DEFINERS, self::OPTION_IGNORE_TABLES];
         $invalidOptionKeys = array_diff(array_keys($options), $validOptionKeys);
         if ($invalidOptionKeys) {
             throw new Exception\DomainException('Invalid options ' . implode(', ', $invalidOptionKeys) . ' provided.');
@@ -310,7 +289,12 @@ class MysqlTabDelimitedExportAdapter implements DatabaseExportAdapterInterface
     {
         $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
             . $this->getMysqlCommandConnectionArguments() . ' ';
-        $dataTables = explode("\n", trim($this->shellCommandHelper->runShellCommand($command)));
+        $result = trim($this->shellCommandHelper->runShellCommand($command));
+        if (!$result) {
+            return [];
+        }
+
+        $dataTables = explode("\n", $result);
         if (!empty($options[self::OPTION_IGNORE_TABLES])) {
             $dataTables = array_diff($dataTables, $options[self::OPTION_IGNORE_TABLES]);
         }
