@@ -58,10 +58,10 @@ class DatabaseAdapter implements DatabaseAdapterInterface
                 FROM information_schema.TABLES 
                 GROUP BY table_schema
                 ORDER BY table_schema";
-        $query = $this->databaseConnection->prepare($sql);
-        $query->execute();
+        $statement = $this->databaseConnection->prepare($sql);
+        $statement->execute();
         $databases = [];
-        foreach ($query->fetchAll() as $row) {
+        foreach ($statement->fetchAll() as $row) {
             $databases[$row['database']] = [
                 'size' => $row['size']
             ];
@@ -81,14 +81,14 @@ class DatabaseAdapter implements DatabaseAdapterInterface
                 FROM information_schema.TABLES
                 WHERE table_schema = :database and TABLE_TYPE='BASE TABLE'
                 ORDER BY TABLE_NAME ASC;";
-        $query = $this->databaseConnection->prepare($sql);
-        $query->execute(
+        $statement = $this->databaseConnection->prepare($sql);
+        $statement->execute(
             [
                 ':database' => $database,
             ]
         );
         $tableSizes = [];
-        foreach ($query->fetchAll() as $row) {
+        foreach ($statement->fetchAll() as $row) {
             $tableSizes[$row['TABLE_NAME']] = [
                 'rows' => $row['table_rows'],
                 'size' => $row['size']
@@ -106,5 +106,55 @@ class DatabaseAdapter implements DatabaseAdapterInterface
     private function quoteIdentifier(string $identifier): string
     {
         return '`' . preg_replace('/[^A-Za-z0-9_]+/', '', $identifier) . '`';
+    }
+
+    /**
+     * @param string $database
+     *
+     * @return bool
+     */
+    public function databaseExists(string $database): bool
+    {
+        $sql = 'SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = :database';
+        $statement = $this->databaseConnection->prepare($sql);
+        $statement->execute([':database' => $database]);
+        return (bool) $statement->fetchColumn();
+    }
+
+    /**
+     * @param string $database
+     *
+     * @return bool
+     */
+    public function databaseIsEmpty(string $database): bool
+    {
+        $sql = 'SELECT COUNT(DISTINCT `table_name`) FROM `information_schema`.`columns` WHERE `table_schema` = :database';
+        $statement = $this->databaseConnection->prepare($sql);
+        $statement->execute([':database' => $database]);
+        return (bool) $statement->fetchColumn();
+    }
+
+    /**
+     * @param string $database
+     *
+     * @return void
+     */
+    public function dropDatabase(string $database): void
+    {
+        $database = str_replace('`', '', $database);
+        $stmt = $this->databaseConnection->query("DROP DATABASE IF EXISTS `$database`");
+        $stmt->execute();
+    }
+
+    /**
+     * @param string $database
+     *
+     * @return void
+     */
+    public function createDatabase(string $database): void
+    {
+        $database = str_replace('`', '', $database);
+        $stmt = $this->databaseConnection->query("CREATE DATABASE `$database`");
+        $stmt->execute();
     }
 }
