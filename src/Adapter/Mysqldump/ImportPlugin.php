@@ -164,7 +164,7 @@ class ImportPlugin
      */
     private function extractAndValidateImportFile(string $filename): string
     {
-        if (0 != strcasecmp('.sql.gz', substr($filename, -7)) && 0 == strcasecmp('.sql', substr($filename, -4))) {
+        if (0 != strcasecmp('.sql.gz', substr($filename, -7)) && 0 != strcasecmp('.sql', substr($filename, -4))) {
             throw new Exception\RuntimeException('Invalid file extension. Should be .sql or .sql.gz.');
         }
 
