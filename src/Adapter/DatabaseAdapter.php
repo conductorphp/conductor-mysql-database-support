@@ -157,4 +157,15 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         $stmt = $this->databaseConnection->query("CREATE DATABASE `$database`");
         $stmt->execute();
     }
+
+    /**
+     * @param string $query
+     * @param string $database
+     */
+    public function run(string $query, string $database): void
+    {
+        $database = str_replace('`', '', $database);
+        $stmt = $this->databaseConnection->query("USE `$database`; $query");
+        $stmt->execute();
+    }
 }
