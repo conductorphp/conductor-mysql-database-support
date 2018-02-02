@@ -131,7 +131,8 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         $sql = 'SELECT COUNT(DISTINCT `table_name`) FROM `information_schema`.`columns` WHERE `table_schema` = :database';
         $statement = $this->databaseConnection->prepare($sql);
         $statement->execute([':database' => $database]);
-        return (bool) $statement->fetchColumn();
+        $numTables = (int) $statement->fetchColumn();
+        return $numTables == 0;
     }
 
     /**
