@@ -32,8 +32,8 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     public function dropDatabaseIfExists(string $name): void
     {
-        $result = $this->databaseConnection->exec("DROP DATABASE IF EXISTS asd" . $this->quoteIdentifier($name));
-        if (!$result) {
+        $result = $this->databaseConnection->exec("DROP DATABASE IF EXISTS " . $this->quoteIdentifier($name));
+        if (false === $result) {
             throw new Exception\RuntimeException('Error dropping database "' . $name . '".');
         }
     }
