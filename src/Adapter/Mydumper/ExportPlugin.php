@@ -70,8 +70,8 @@ class ExportPlugin
         array $options = []
     ): string {
         $workingDir = $this->prepareWorkingDirectory($path);
-        $filename = "$workingDir/$database.tgz";
-        $this->logger->info("Exporting database $database to file $filename");
+        $path = realpath($path);
+        $this->logger->info("Exporting database $database to file $path/$database.tgz");
 
         $this->assertIsUsable();
         $this->validateOptions($options);
@@ -86,7 +86,7 @@ class ExportPlugin
             throw new Exception\RuntimeException($e->getMessage());
         }
 
-        return realpath($path) . "/$database.tgz";
+        return "$path/$database.tgz";
     }
 
     /**

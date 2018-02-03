@@ -109,21 +109,12 @@ class ExportPlugin
         string $path,
         array $options = []
     ): string {
-        $workingDir = $this->prepareWorkingDirectory($path);
-        $filename = "$workingDir/$database.sql.gz";
-        $this->logger->info("Exporting database $database to file $filename");
+        $this->prepareWorkingDirectory($path);
+        $path = realpath($path);
+        $this->logger->info("Exporting database $database to file $path/$database.sql.gz");
 
         $this->assertIsUsable();
         $this->validateOptions($options);
-        if (!(is_dir($path) && is_writable($path))) {
-            throw new Exception\RuntimeException(
-                sprintf(
-                    'Path "%s" is not a writable directory.',
-                    $path
-                )
-            );
-        }
-        $path = realpath($path);
 
         $dumpStructureCommand = $this->getDumpStructureCommand($database, $options);
         $dumpDataCommand = 'mysqldump ' . escapeshellarg($database) . ' '
@@ -145,16 +136,15 @@ class ExportPlugin
             throw new Exception\RuntimeException($e->getMessage());
         }
 
-        return $filename;
+        return "$path/$database.sql.gz";
     }
 
     /**
      * @param string $path
      *
      * @throws Exception\RuntimeException If path is not writable
-     * @return string Working directory
      */
-    private function prepareWorkingDirectory(string $path): string
+    private function prepareWorkingDirectory(string $path): void
     {
         if (!(is_dir($path) && is_writable($path))) {
             throw new Exception\RuntimeException(
@@ -164,12 +154,6 @@ class ExportPlugin
                 )
             );
         }
-
-        $workingDir = realpath($path) . '/' . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
-        if (!is_dir($workingDir)) {
-            mkdir($workingDir);
-        }
-        return $workingDir;
     }
 
     /**

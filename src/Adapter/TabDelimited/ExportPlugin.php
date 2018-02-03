@@ -112,8 +112,8 @@ class ExportPlugin
         array $options = []
     ): string {
         $workingDir = $this->prepareWorkingDirectory($path);
-        $filename = "$workingDir/$database.tgz";
-        $this->logger->info("Exporting database $database to file $filename");
+        $path = realpath($path);
+        $this->logger->info("Exporting database $database to file $path/$database.tgz");
         $this->assertIsUsable();
         $this->validateOptions($options);
 
@@ -131,7 +131,7 @@ class ExportPlugin
             throw new Exception\RuntimeException($e->getMessage());
         }
 
-        return $filename;
+        return "$path/$database.tgz";
     }
 
     /**
@@ -187,7 +187,7 @@ class ExportPlugin
                 $numFiles = ceil($numRows / $rowsPerFile);
                 $fileNumber = 1;
                 for ($i = 0; $i < $numRows; $i += $rowsPerFile) {
-                    $dumpDataCommand .= "echo 'Exporting \"$table\" data [$fileNumber/$numFiles]...' 1>&2 && "
+                    $dumpDataCommand .= "echo 'Exporting \"$table\" data [$fileNumber/$numFiles].' 1>&2 && "
                         . 'mysql ' . escapeshellarg($database) . ' --skip-column-names -e "SELECT * FROM \`' . $table
                         . '\` '
                         . $orderBy
