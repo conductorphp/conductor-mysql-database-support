@@ -69,13 +69,13 @@ class ImportPlugin
         $this->logger->info("Importing file $filename into database $database");
         $this->assertIsUsable();
         $this->validateOptions($options);
-        $extractedDir = $this->extractAndValidateImportFile($filename);
+        $workingDir = $this->extractAndValidateImportFile($filename);
 
-        $command = $this->getMyDumperImportCommand($database, $extractedDir);
+        $command = $this->getMyDumperImportCommand($database, $workingDir);
 
         try {
             $this->shellCommandHelper->runShellCommand($command, ShellCommandHelper::PRIORITY_LOW);
-            $this->shellCommandHelper->runShellCommand('rm -rf ' . escapeshellarg($extractedDir));
+            $this->shellCommandHelper->runShellCommand('rm -rf ' . escapeshellarg($workingDir));
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
@@ -96,14 +96,14 @@ class ImportPlugin
 
     /**
      * @param string $database
-     * @param string $extractedDir
+     * @param string $workingDir
      *
      * @return string
      */
-    private function getMyDumperImportCommand(string $database, string $extractedDir): string
+    private function getMyDumperImportCommand(string $database, string $workingDir): string
     {
         $importCommand = 'myloader --database ' . escapeshellarg($database) . ' --directory '
-            . escapeshellarg($extractedDir) . ' -v 3 --overwrite-tables '
+            . escapeshellarg($workingDir) . '/' . $database . ' -v 3 --overwrite-tables '
             . $this->getMysqlCommandConnectionArguments();
 
         return $importCommand;
@@ -142,15 +142,7 @@ class ImportPlugin
             'cd ' . escapeshellarg($path)
             . ' && tar xzf ' . escapeshellarg(basename($filename))
         );
-        $extractedDir = "$path/" . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
-
-        if (!is_dir($extractedDir)) {
-            throw new Exception\RuntimeException(
-                'Provided file is not a database export created by devops database:export.'
-            );
-        }
-
-        return $extractedDir;
+        return $path;
     }
 
     /**
