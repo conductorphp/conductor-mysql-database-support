@@ -69,13 +69,12 @@ class ImportPlugin
         $this->logger->info("Importing file $filename into database $database");
         $this->assertIsUsable();
         $this->validateOptions($options);
-        $workingDir = $this->extractAndValidateImportFile($filename);
-
-        $command = $this->getMyDumperImportCommand($database, $workingDir);
+        $extractedPath = $this->extractAndValidateImportFile($filename, $database);
+        $command = $this->getMyDumperImportCommand($database, $extractedPath);
 
         try {
             $this->shellCommandHelper->runShellCommand($command, ShellCommandHelper::PRIORITY_LOW);
-            $this->shellCommandHelper->runShellCommand('rm -rf ' . escapeshellarg($workingDir));
+            $this->shellCommandHelper->runShellCommand('rm -rf ' . escapeshellarg($extractedPath));
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
@@ -96,14 +95,14 @@ class ImportPlugin
 
     /**
      * @param string $database
-     * @param string $workingDir
+     * @param string $importDir
      *
      * @return string
      */
-    private function getMyDumperImportCommand(string $database, string $workingDir): string
+    private function getMyDumperImportCommand(string $database, string $importDir): string
     {
         $importCommand = 'myloader --database ' . escapeshellarg($database) . ' --directory '
-            . escapeshellarg($workingDir) . '/' . $database . ' -v 3 --overwrite-tables '
+            . escapeshellarg($importDir) . ' -v 3 --overwrite-tables '
             . $this->getMysqlCommandConnectionArguments();
 
         return $importCommand;
@@ -127,11 +126,12 @@ class ImportPlugin
 
     /**
      * @param string $filename
+     * @param string $database
      *
      * @throws Exception\RuntimeException If file extension or format invalid
      * @return string Extracted directory path
      */
-    private function extractAndValidateImportFile(string $filename): string
+    private function extractAndValidateImportFile(string $filename, string $database): string
     {
         if (0 != strcasecmp('.tgz', substr($filename, -4))) {
             throw new Exception\RuntimeException('Invalid file extension. Should be .tgz.');
@@ -142,7 +142,12 @@ class ImportPlugin
             'cd ' . escapeshellarg($path)
             . ' && tar xzf ' . escapeshellarg(basename($filename))
         );
-        return $path;
+
+        if (!file_exists("$path/$database")) {
+            throw new Exception\RuntimeException("File \"$filename\" is not a valid mydumper export.");
+        }
+
+        return "$path/$database";
     }
 
     /**
