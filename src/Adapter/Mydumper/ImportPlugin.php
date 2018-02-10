@@ -1,10 +1,10 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Adapter\Mydumper;
+namespace ConductorMySqlSupport\Adapter\Mydumper;
 
-use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
-use DevopsToolCore\ShellCommandHelper;
-use DevopsToolMySqlSupport\Exception;
+use ConductorCore\Database\DatabaseImportExportAdapterInterface;
+use ConductorCore\ShellCommandHelper;
+use ConductorMySqlSupport\Exception;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 

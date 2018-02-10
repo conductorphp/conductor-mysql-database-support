@@ -1,6 +1,6 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Exception;
+namespace ConductorMySqlSupport\Exception;
 
 class InvalidArgumentException extends \InvalidArgumentException implements ExceptionInterface
 {

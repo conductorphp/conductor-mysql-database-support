@@ -1,8 +1,8 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Adapter;
+namespace ConductorMySqlSupport\Adapter;
 
-use DevopsToolMySqlSupport\Exception;
+use ConductorMySqlSupport\Exception;
 
 class DatabaseConfig
 {

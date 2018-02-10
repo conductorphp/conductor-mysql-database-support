@@ -1,9 +1,9 @@
 {
-    "name": "robofirm/devops-tool-mysql-database-support",
-    "description": "Robofirm DevOps Tool: MySQL Database Support",
+    "name": "conductor/mysql-database-support",
+    "description": "Conductor: MySQL Database Support",
     "type": "library",
-    "homepage": "https://bitbucket.org/robofirm/devops-tool-mysql-database-support",
-    "license": "MIT",
+    "homepage": "https://github.com/conductorphp/mysql-database-support",
+    "license": "Apache 2.0",
     "authors": [
         {
             "name": "Kirk Madera",
@@ -19,12 +19,12 @@
     },
     "autoload": {
         "psr-4": {
-            "DevopsToolMySqlSupport\\": "src/"
+            "ConductorMySqlSupport\\": "src/"
         }
     },
     "extra": {
         "zf": {
-            "config-provider": "DevopsToolMySqlSupport\\ConfigProvider"
+            "config-provider": "ConductorMySqlSupport\\ConfigProvider"
         }
     }
 }

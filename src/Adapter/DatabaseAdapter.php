@@ -1,9 +1,9 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Adapter;
+namespace ConductorMySqlSupport\Adapter;
 
-use DevopsToolMySqlSupport\Exception;
-use DevopsToolCore\Database\DatabaseAdapterInterface;
+use ConductorMySqlSupport\Exception;
+use ConductorCore\Database\DatabaseAdapterInterface;
 use PDO;
 
 class DatabaseAdapter implements DatabaseAdapterInterface

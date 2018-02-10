@@ -1,6 +1,6 @@
 <?php
 
-namespace DevopsToolMySqlSupport;
+namespace ConductorMySqlSupport;
 
 return [
     'factories' => [

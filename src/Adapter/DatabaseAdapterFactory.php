@@ -1,8 +1,8 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Adapter;
+namespace ConductorMySqlSupport\Adapter;
 
-use DevopsToolMySqlSupport\Exception;
+use ConductorMySqlSupport\Exception;
 use Interop\Container\ContainerInterface;
 use Interop\Container\Exception\ContainerException;
 use Zend\ServiceManager\Exception\ServiceNotCreatedException;

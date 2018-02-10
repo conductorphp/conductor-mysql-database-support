@@ -1,9 +1,9 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Adapter\Mysqldump;
+namespace ConductorMySqlSupport\Adapter\Mysqldump;
 
-use DevopsToolMySqlSupport\Adapter\Mydumper\MydumperImportExportAdapter;
-use DevopsToolMySqlSupport\Exception;
+use ConductorMySqlSupport\Adapter\Mydumper\MydumperImportExportAdapter;
+use ConductorMySqlSupport\Exception;
 use Interop\Container\ContainerInterface;
 use Interop\Container\Exception\ContainerException;
 use Zend\ServiceManager\Exception\ServiceNotCreatedException;

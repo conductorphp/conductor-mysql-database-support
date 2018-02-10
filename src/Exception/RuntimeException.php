@@ -1,6 +1,6 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Exception;
+namespace ConductorMySqlSupport\Exception;
 
 class RuntimeException extends \RuntimeException implements ExceptionInterface
 {

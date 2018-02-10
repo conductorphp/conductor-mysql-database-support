@@ -1,9 +1,9 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Adapter\Mysqldump;
+namespace ConductorMySqlSupport\Adapter\Mysqldump;
 
-use DevopsToolCore\Exception;
-use DevopsToolCore\ShellCommandHelper;
+use ConductorCore\Exception;
+use ConductorCore\ShellCommandHelper;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 

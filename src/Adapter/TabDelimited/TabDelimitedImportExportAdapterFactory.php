@@ -1,8 +1,8 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Adapter\TabDelimited;
+namespace ConductorMySqlSupport\Adapter\TabDelimited;
 
-use DevopsToolMySqlSupport\Exception;
+use ConductorMySqlSupport\Exception;
 use Interop\Container\ContainerInterface;
 use Interop\Container\Exception\ContainerException;
 use Zend\ServiceManager\Exception\ServiceNotCreatedException;

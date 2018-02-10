@@ -1,10 +1,10 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Adapter\TabDelimited;
+namespace ConductorMySqlSupport\Adapter\TabDelimited;
 
-use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
-use DevopsToolCore\Exception;
-use DevopsToolCore\ShellCommandHelper;
+use ConductorCore\Database\DatabaseImportExportAdapterInterface;
+use ConductorCore\Exception;
+use ConductorCore\ShellCommandHelper;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -192,7 +192,7 @@ class ImportPlugin
 
         if (!is_dir($extractedDir)) {
             throw new Exception\RuntimeException(
-                'Provided file is not a database export created by devops database:export.'
+                'Provided file is not a database export created by conductor database:export.'
             );
         }
 

@@ -1,11 +1,11 @@
 <?php
 
-namespace DevopsToolMySqlSupport\Adapter\TabDelimited;
+namespace ConductorMySqlSupport\Adapter\TabDelimited;
 
-use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
-use DevopsToolCore\Exception;
-use DevopsToolCore\ShellCommandHelper;
-use DevopsToolMySqlSupport\Adapter\DatabaseConfig;
+use ConductorCore\Database\DatabaseImportExportAdapterInterface;
+use ConductorCore\Exception;
+use ConductorCore\ShellCommandHelper;
+use ConductorMySqlSupport\Adapter\DatabaseConfig;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 

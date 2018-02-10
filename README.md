@@ -1,5 +1,5 @@
-Robofirm DevOps Tool: MySQL Database Support
+Conductor: MySQL Database Support
 ============================================
 
 This module adds support for MySQL databases in the   
-[Robofirm DevOps Tool](https://bitbucket.org/robofirm/robofirm-devops).
+[Conductor](https://github.com/conductorphp/conductor-core).
