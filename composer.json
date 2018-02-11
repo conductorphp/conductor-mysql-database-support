@@ -15,7 +15,8 @@
     },
     "require": {
         "php": "^7.1",
-        "ext-pdo_mysql": "*"
+        "ext-pdo_mysql": "*",
+        "conductor/core": "*"
     },
     "autoload": {
         "psr-4": {
