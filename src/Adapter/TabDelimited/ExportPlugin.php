@@ -124,7 +124,7 @@ class ExportPlugin
         );
 
         try {
-            $this->shellCommandHelper->runShellCommand($command, ShellCommandHelper::PRIORITY_LOW);
+            $this->shellCommandHelper->runShellCommand($command, null, null, ShellCommandHelper::PRIORITY_LOW);
             $this->shellCommandHelper->runShellCommand('rm -rf ' . escapeshellarg($workingDir));
 
         } catch (\Exception $e) {

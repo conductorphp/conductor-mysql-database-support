@@ -73,7 +73,7 @@ class ImportPlugin
         $command = $this->getMyDumperImportCommand($database, $extractedPath);
 
         try {
-            $this->shellCommandHelper->runShellCommand($command, ShellCommandHelper::PRIORITY_LOW);
+            $this->shellCommandHelper->runShellCommand($command, null, null, ShellCommandHelper::PRIORITY_LOW);
             $this->shellCommandHelper->runShellCommand('rm -rf ' . escapeshellarg($extractedPath));
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());

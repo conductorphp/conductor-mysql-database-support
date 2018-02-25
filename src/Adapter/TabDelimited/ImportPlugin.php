@@ -115,7 +115,7 @@ class ImportPlugin
         $command = $this->getTabDelimitedFileImportCommand($database, $extractedDir);
 
         try {
-            $this->shellCommandHelper->runShellCommand($command, ShellCommandHelper::PRIORITY_LOW);
+            $this->shellCommandHelper->runShellCommand($command, null, null, ShellCommandHelper::PRIORITY_LOW);
             $this->shellCommandHelper->runShellCommand('rm -rf ' . escapeshellarg($extractedDir));
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());

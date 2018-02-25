@@ -131,7 +131,7 @@ class ExportPlugin
             . '| gzip -9 > ' . escapeshellarg("$path/$database.sql.gz");
 
         try {
-            $this->shellCommandHelper->runShellCommand($command, ShellCommandHelper::PRIORITY_LOW);
+            $this->shellCommandHelper->runShellCommand($command, null, null,ShellCommandHelper::PRIORITY_LOW);
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
