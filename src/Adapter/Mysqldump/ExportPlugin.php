@@ -4,7 +4,7 @@ namespace ConductorMySqlSupport\Adapter\Mysqldump;
 
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Exception;
-use ConductorCore\ShellCommandHelper;
+use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -30,9 +30,9 @@ class ExportPlugin
      */
     private $port;
     /**
-     * @var ShellCommandHelper
+     * @var LocalShellAdapter
      */
-    private $shellCommandHelper;
+    private $localShellAdapter;
     /**
      * @var null|LoggerInterface
      */
@@ -44,20 +44,20 @@ class ExportPlugin
         string $password,
         string $host = 'localhost',
         int $port = 3306,
-        ShellCommandHelper $shellCommandHelper = null,
+        LocalShellAdapter $localShellAdapter = null,
         LoggerInterface $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
-        if (is_null($shellCommandHelper)) {
-            $shellCommandHelper = new ShellCommandHelper($logger);
+        if (is_null($localShellAdapter)) {
+            $localShellAdapter = new LocalShellAdapter($logger);
         }
         $this->username = $username;
         $this->password = $password;
         $this->host = $host;
         $this->port = $port;
-        $this->shellCommandHelper = $shellCommandHelper;
+        $this->localShellAdapter = $localShellAdapter;
         $this->logger = $logger;
     }
 
@@ -131,7 +131,7 @@ class ExportPlugin
             . '| gzip -9 > ' . escapeshellarg("$path/$database.sql.gz");
 
         try {
-            $this->shellCommandHelper->runShellCommand($command, null, null,ShellCommandHelper::PRIORITY_LOW);
+            $this->localShellAdapter->runShellCommand($command, null, null,LocalShellAdapter::PRIORITY_LOW);
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
@@ -163,7 +163,7 @@ class ExportPlugin
      */
     public function setLogger(LoggerInterface $logger): void
     {
-        $this->shellCommandHelper->setLogger($logger);
+        $this->localShellAdapter->setLogger($logger);
         $this->logger = $logger;
     }
 

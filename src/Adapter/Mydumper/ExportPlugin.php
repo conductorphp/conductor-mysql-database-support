@@ -3,7 +3,7 @@
 namespace ConductorMySqlSupport\Adapter\Mydumper;
 
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
-use ConductorCore\ShellCommandHelper;
+use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use ConductorMySqlSupport\Exception;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -30,9 +30,9 @@ class ExportPlugin
      */
     private $port;
     /**
-     * @var ShellCommandHelper
+     * @var LocalShellAdapter
      */
-    private $shellCommandHelper;
+    private $localShellAdapter;
     /**
      * @var null|LoggerInterface
      */
@@ -44,20 +44,20 @@ class ExportPlugin
         string $password,
         string $host = 'localhost',
         int $port = 3306,
-        ShellCommandHelper $shellCommandHelper = null,
+        LocalShellAdapter $localShellAdapter = null,
         LoggerInterface $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
-        if (is_null($shellCommandHelper)) {
-            $shellCommandHelper = new ShellCommandHelper($logger);
+        if (is_null($localShellAdapter)) {
+            $localShellAdapter = new LocalShellAdapter($logger);
         }
         $this->username = $username;
         $this->password = $password;
         $this->host = $host;
         $this->port = $port;
-        $this->shellCommandHelper = $shellCommandHelper;
+        $this->localShellAdapter = $localShellAdapter;
         $this->logger = $logger;
     }
 
@@ -79,8 +79,8 @@ class ExportPlugin
         $command = $this->getMyDumperExportCommand($database, $workingDir, $options);
 
         try {
-            $this->shellCommandHelper->runShellCommand($command, null, null,ShellCommandHelper::PRIORITY_LOW);
-            $this->shellCommandHelper->runShellCommand('rm -rf ' . escapeshellarg($workingDir));
+            $this->localShellAdapter->runShellCommand($command, null, null,LocalShellAdapter::PRIORITY_LOW);
+            $this->localShellAdapter->runShellCommand('rm -rf ' . escapeshellarg($workingDir));
 
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
@@ -158,7 +158,7 @@ class ExportPlugin
         if (!empty($options[self::OPTION_IGNORE_TABLES])) {
             $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
                 . $this->getMysqlCommandConnectionArguments() . ' ';
-            $allTables = explode("\n", trim($this->shellCommandHelper->runShellCommand($command)));
+            $allTables = explode("\n", trim($this->localShellAdapter->runShellCommand($command)));
             $dataTables = array_diff($allTables, $options[self::OPTION_IGNORE_TABLES]);
         }
         return $dataTables;
@@ -221,7 +221,7 @@ class ExportPlugin
      */
     public function setLogger(LoggerInterface $logger): void
     {
-        $this->shellCommandHelper->setLogger($logger);
+        $this->localShellAdapter->setLogger($logger);
         $this->logger = $logger;
     }
 

@@ -4,7 +4,7 @@ namespace ConductorMySqlSupport\Adapter\TabDelimited;
 
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Exception;
-use ConductorCore\ShellCommandHelper;
+use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use ConductorMySqlSupport\Adapter\DatabaseConfig;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -31,9 +31,9 @@ class ExportPlugin
      */
     private $port;
     /**
-     * @var ShellCommandHelper
+     * @var LocalShellAdapter
      */
-    private $shellCommandHelper;
+    private $localShellAdapter;
     /**
      * @var null|LoggerInterface
      */
@@ -45,20 +45,20 @@ class ExportPlugin
         string $password,
         string $host = 'localhost',
         int $port = 3306,
-        ShellCommandHelper $shellCommandHelper = null,
+        LocalShellAdapter $localShellAdapter = null,
         LoggerInterface $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
-        if (is_null($shellCommandHelper)) {
-            $shellCommandHelper = new ShellCommandHelper($logger);
+        if (is_null($localShellAdapter)) {
+            $localShellAdapter = new LocalShellAdapter($logger);
         }
         $this->username = $username;
         $this->password = $password;
         $this->host = $host;
         $this->port = $port;
-        $this->shellCommandHelper = $shellCommandHelper;
+        $this->localShellAdapter = $localShellAdapter;
         $this->logger = $logger;
     }
 
@@ -124,8 +124,8 @@ class ExportPlugin
         );
 
         try {
-            $this->shellCommandHelper->runShellCommand($command, null, null, ShellCommandHelper::PRIORITY_LOW);
-            $this->shellCommandHelper->runShellCommand('rm -rf ' . escapeshellarg($workingDir));
+            $this->localShellAdapter->runShellCommand($command, null, null, LocalShellAdapter::PRIORITY_LOW);
+            $this->localShellAdapter->runShellCommand('rm -rf ' . escapeshellarg($workingDir));
 
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
@@ -139,7 +139,7 @@ class ExportPlugin
      */
     public function setLogger(LoggerInterface $logger): void
     {
-        $this->shellCommandHelper->setLogger($logger);
+        $this->localShellAdapter->setLogger($logger);
         $this->logger = $logger;
     }
 
@@ -166,7 +166,7 @@ class ExportPlugin
                 $numRowsCommand = 'mysql ' . escapeshellarg($database)
                     . ' --skip-column-names --silent -e "SELECT COUNT(*) FROM \`' . $table . '\`" '
                     . $this->getMysqlCommandConnectionArguments() . ' ';
-                $numRows = (int)$this->shellCommandHelper->runShellCommand($numRowsCommand);
+                $numRows = (int)$this->localShellAdapter->runShellCommand($numRowsCommand);
                 if (0 == $numRows) {
                     continue;
                 }
@@ -177,7 +177,7 @@ class ExportPlugin
                     . 'AND \`TABLE_NAME\` = ' . escapeshellarg($table) . ' '
                     . 'AND \`COLUMN_KEY\` = \'PRI\'" '
                     . $this->getMysqlCommandConnectionArguments() . ' ';
-                $primaryKeys = trim($this->shellCommandHelper->runShellCommand($getPrimaryKeyCommand));
+                $primaryKeys = trim($this->localShellAdapter->runShellCommand($getPrimaryKeyCommand));
                 if ($primaryKeys) {
                     $orderBy = 'ORDER BY \`' . implode('\`,\`', explode("\n", $primaryKeys)) . '\` ';
                 } else {
@@ -291,7 +291,7 @@ class ExportPlugin
     {
         $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
             . $this->getMysqlCommandConnectionArguments() . ' ';
-        $result = trim($this->shellCommandHelper->runShellCommand($command));
+        $result = trim($this->localShellAdapter->runShellCommand($command));
         if (!$result) {
             return [];
         }
