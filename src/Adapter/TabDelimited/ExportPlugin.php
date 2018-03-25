@@ -4,8 +4,8 @@ namespace ConductorMySqlSupport\Adapter\TabDelimited;
 
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Exception;
-use ConductorCore\Shell\Adapter\LocalShellAdapter;
-use ConductorMySqlSupport\Adapter\DatabaseConfig;
+use ConductorCore\Shell\Adapter\ShellAdapterInterface;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -31,9 +31,9 @@ class ExportPlugin
      */
     private $port;
     /**
-     * @var LocalShellAdapter
+     * @var ShellAdapterInterface
      */
-    private $localShellAdapter;
+    private $shellAdapter;
     /**
      * @var null|LoggerInterface
      */
@@ -45,20 +45,18 @@ class ExportPlugin
         string $password,
         string $host = 'localhost',
         int $port = 3306,
-        LocalShellAdapter $localShellAdapter = null,
+        ShellAdapterInterface $shellAdapter = null,
         LoggerInterface $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
-        if (is_null($localShellAdapter)) {
-            $localShellAdapter = new LocalShellAdapter($logger);
-        }
+
         $this->username = $username;
         $this->password = $password;
         $this->host = $host;
         $this->port = $port;
-        $this->localShellAdapter = $localShellAdapter;
+        $this->shellAdapter = $shellAdapter;
         $this->logger = $logger;
     }
 
@@ -124,23 +122,14 @@ class ExportPlugin
         );
 
         try {
-            $this->localShellAdapter->runShellCommand($command, null, null, LocalShellAdapter::PRIORITY_LOW);
-            $this->localShellAdapter->runShellCommand('rm -rf ' . escapeshellarg($workingDir));
+            $this->shellAdapter->runShellCommand($command, null, null, ShellAdapterInterface::PRIORITY_LOW);
+            $this->shellAdapter->runShellCommand('rm -rf ' . escapeshellarg($workingDir));
 
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
 
         return "$path/$database.tgz";
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->localShellAdapter->setLogger($logger);
-        $this->logger = $logger;
     }
 
     /**
@@ -166,7 +155,7 @@ class ExportPlugin
                 $numRowsCommand = 'mysql ' . escapeshellarg($database)
                     . ' --skip-column-names --silent -e "SELECT COUNT(*) FROM \`' . $table . '\`" '
                     . $this->getMysqlCommandConnectionArguments() . ' ';
-                $numRows = (int)$this->localShellAdapter->runShellCommand($numRowsCommand);
+                $numRows = (int)$this->shellAdapter->runShellCommand($numRowsCommand);
                 if (0 == $numRows) {
                     continue;
                 }
@@ -177,7 +166,7 @@ class ExportPlugin
                     . 'AND \`TABLE_NAME\` = ' . escapeshellarg($table) . ' '
                     . 'AND \`COLUMN_KEY\` = \'PRI\'" '
                     . $this->getMysqlCommandConnectionArguments() . ' ';
-                $primaryKeys = trim($this->localShellAdapter->runShellCommand($getPrimaryKeyCommand));
+                $primaryKeys = trim($this->shellAdapter->runShellCommand($getPrimaryKeyCommand));
                 if ($primaryKeys) {
                     $orderBy = 'ORDER BY \`' . implode('\`,\`', explode("\n", $primaryKeys)) . '\` ';
                 } else {
@@ -291,7 +280,7 @@ class ExportPlugin
     {
         $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
             . $this->getMysqlCommandConnectionArguments() . ' ';
-        $result = trim($this->localShellAdapter->runShellCommand($command));
+        $result = trim($this->shellAdapter->runShellCommand($command));
         if (!$result) {
             return [];
         }
@@ -301,5 +290,16 @@ class ExportPlugin
             $dataTables = array_diff($dataTables, $options[self::OPTION_IGNORE_TABLES]);
         }
         return $dataTables;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        if ($this->shellAdapter instanceof LoggerAwareInterface) {
+            $this->shellAdapter->setLogger($logger);
+        }
+        $this->logger = $logger;
     }
 }

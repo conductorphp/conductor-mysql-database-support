@@ -5,6 +5,7 @@ namespace ConductorMySqlSupport\Adapter\TabDelimited;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Exception;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
+use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -20,13 +21,12 @@ class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInte
      */
     private $exportPlugin;
 
-
     public function __construct(
         string $username,
         string $password,
         string $host = 'localhost',
         int $port = 3306,
-        LocalShellAdapter $localShellAdapter = null,
+        ShellAdapterInterface $shellAdapter = null,
         ImportPlugin $importPlugin = null,
         ExportPlugin $exportPlugin = null,
         LoggerInterface $logger = null
@@ -34,16 +34,16 @@ class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInte
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
-        if (is_null($localShellAdapter)) {
-            $localShellAdapter = new LocalShellAdapter($logger);
+        if (is_null($shellAdapter)) {
+            $shellAdapter = new LocalShellAdapter($logger);
         }
 
         if (is_null($importPlugin)) {
-            $importPlugin = new ImportPlugin($username, $password, $host, $port, $localShellAdapter, $logger);
+            $importPlugin = new ImportPlugin($username, $password, $host, $port, $shellAdapter, $logger);
         }
         $this->importPlugin = $importPlugin;
         if (is_null($exportPlugin)) {
-            $exportPlugin = new ExportPlugin($username, $password, $host, $port, $localShellAdapter, $logger);
+            $exportPlugin = new ExportPlugin($username, $password, $host, $port, $shellAdapter, $logger);
         }
         $this->exportPlugin = $exportPlugin;
     }

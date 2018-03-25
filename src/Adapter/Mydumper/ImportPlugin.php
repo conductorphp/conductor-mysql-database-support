@@ -2,9 +2,9 @@
 
 namespace ConductorMySqlSupport\Adapter\Mydumper;
 
-use ConductorCore\Database\DatabaseImportExportAdapterInterface;
-use ConductorCore\Shell\Adapter\LocalShellAdapter;
+use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use ConductorMySqlSupport\Exception;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -27,9 +27,9 @@ class ImportPlugin
      */
     private $port;
     /**
-     * @var LocalShellAdapter
+     * @var ShellAdapterInterface
      */
-    private $localShellAdapter;
+    private $shellAdapter;
     /**
      * @var null|LoggerInterface
      */
@@ -41,20 +41,17 @@ class ImportPlugin
         string $password,
         string $host = 'localhost',
         int $port = 3306,
-        LocalShellAdapter $localShellAdapter = null,
+        ShellAdapterInterface $shellAdapter,
         LoggerInterface $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
-        if (is_null($localShellAdapter)) {
-            $localShellAdapter = new LocalShellAdapter($logger);
-        }
         $this->username = $username;
         $this->password = $password;
         $this->host = $host;
         $this->port = $port;
-        $this->localShellAdapter = $localShellAdapter;
+        $this->shellAdapter = $shellAdapter;
         $this->logger = $logger;
     }
 
@@ -73,8 +70,8 @@ class ImportPlugin
         $command = $this->getMyDumperImportCommand($database, $extractedPath);
 
         try {
-            $this->localShellAdapter->runShellCommand($command, null, null, LocalShellAdapter::PRIORITY_LOW);
-            $this->localShellAdapter->runShellCommand('rm -rf ' . escapeshellarg($extractedPath));
+            $this->shellAdapter->runShellCommand($command, null, null, ShellAdapterInterface::PRIORITY_LOW);
+            $this->shellAdapter->runShellCommand('rm -rf ' . escapeshellarg($extractedPath));
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
@@ -138,7 +135,7 @@ class ImportPlugin
         }
 
         $path = realpath(dirname($filename));
-        $this->localShellAdapter->runShellCommand(
+        $this->shellAdapter->runShellCommand(
             'cd ' . escapeshellarg($path)
             . ' && tar xzf ' . escapeshellarg(basename($filename))
         );
@@ -148,15 +145,6 @@ class ImportPlugin
         }
 
         return "$path/$database";
-    }
-
-    /**
-     * @param LoggerInterface $logger
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->localShellAdapter->setLogger($logger);
-        $this->logger = $logger;
     }
 
     /**
@@ -197,5 +185,16 @@ class ImportPlugin
                 )
             );
         }
+    }
+
+    /**
+     * @param LoggerInterface $logger
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        if ($this->shellAdapter instanceof LoggerAwareInterface) {
+            $this->shellAdapter->setLogger($logger);
+        }
+        $this->logger = $logger;
     }
 }

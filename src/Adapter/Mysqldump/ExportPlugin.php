@@ -2,9 +2,9 @@
 
 namespace ConductorMySqlSupport\Adapter\Mysqldump;
 
-use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Exception;
-use ConductorCore\Shell\Adapter\LocalShellAdapter;
+use ConductorCore\Shell\Adapter\ShellAdapterInterface;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -30,9 +30,9 @@ class ExportPlugin
      */
     private $port;
     /**
-     * @var LocalShellAdapter
+     * @var ShellAdapterInterface
      */
-    private $localShellAdapter;
+    private $shellAdapter;
     /**
      * @var null|LoggerInterface
      */
@@ -44,20 +44,17 @@ class ExportPlugin
         string $password,
         string $host = 'localhost',
         int $port = 3306,
-        LocalShellAdapter $localShellAdapter = null,
+        ShellAdapterInterface $shellAdapter = null,
         LoggerInterface $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
-        if (is_null($localShellAdapter)) {
-            $localShellAdapter = new LocalShellAdapter($logger);
-        }
         $this->username = $username;
         $this->password = $password;
         $this->host = $host;
         $this->port = $port;
-        $this->localShellAdapter = $localShellAdapter;
+        $this->shellAdapter = $shellAdapter;
         $this->logger = $logger;
     }
 
@@ -131,7 +128,7 @@ class ExportPlugin
             . '| gzip -9 > ' . escapeshellarg("$path/$database.sql.gz");
 
         try {
-            $this->localShellAdapter->runShellCommand($command, null, null,LocalShellAdapter::PRIORITY_LOW);
+            $this->shellAdapter->runShellCommand($command, null, null, ShellAdapterInterface::PRIORITY_LOW);
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
@@ -154,17 +151,6 @@ class ExportPlugin
                 )
             );
         }
-    }
-
-    /**
-     * @param LoggerInterface $logger
-     *
-     * @return void
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->localShellAdapter->setLogger($logger);
-        $this->logger = $logger;
     }
 
     /**
@@ -212,6 +198,19 @@ class ExportPlugin
         if ($invalidOptionKeys) {
             throw new Exception\DomainException('Invalid options ' . implode(', ', $invalidOptionKeys) . ' provided.');
         }
+    }
+
+    /**
+     * @param LoggerInterface $logger
+     *
+     * @return void
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        if ($this->shellAdapter instanceof LoggerAwareInterface) {
+            $this->shellAdapter->setLogger($logger);
+        }
+        $this->logger = $logger;
     }
 
 }
