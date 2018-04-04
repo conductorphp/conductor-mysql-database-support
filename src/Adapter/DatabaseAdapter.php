@@ -44,7 +44,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     public function getDatabases(): array
     {
-        return $this->databaseConnection->query("SHOW DATABASES")->fetchColumn();
+        return $this->databaseConnection->query("SHOW DATABASES")->fetchAll(PDO::FETCH_COLUMN);
     }
 
     /**
