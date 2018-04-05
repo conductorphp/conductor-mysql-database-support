@@ -66,7 +66,7 @@ class ImportPlugin
         $this->logger->info("Importing file $filename into database $database");
         $this->assertIsUsable();
         $this->validateOptions($options);
-        $extractedPath = $this->extractAndValidateImportFile($filename, $database);
+        $extractedPath = $this->extractAndValidateImportFile($filename);
         $command = $this->getMyDumperImportCommand($database, $extractedPath);
 
         try {
@@ -123,12 +123,11 @@ class ImportPlugin
 
     /**
      * @param string $filename
-     * @param string $database
      *
      * @throws Exception\RuntimeException If file extension or format invalid
      * @return string Extracted directory path
      */
-    private function extractAndValidateImportFile(string $filename, string $database): string
+    private function extractAndValidateImportFile(string $filename): string
     {
         if (0 != strcasecmp('.tgz', substr($filename, -4))) {
             throw new Exception\RuntimeException('Invalid file extension. Should be .tgz.');
@@ -138,13 +137,15 @@ class ImportPlugin
         $this->shellAdapter->runShellCommand(
             'cd ' . escapeshellarg($path)
             . ' && tar xzf ' . escapeshellarg(basename($filename))
+            . ' && rm -f ' . escapeshellarg(basename($filename))
         );
 
-        if (!file_exists("$path/$database")) {
+        $files = array_slice(scandir($path), 2);
+        if (1 != count($files)) {
             throw new Exception\RuntimeException("File \"$filename\" is not a valid mydumper export.");
         }
 
-        return "$path/$database";
+        return "$path/{$files[0]}";
     }
 
     /**
