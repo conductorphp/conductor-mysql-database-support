@@ -3,6 +3,7 @@
 namespace ConductorMySqlSupport\Adapter\Mysqldump;
 
 use ConductorCore\Exception;
+use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
