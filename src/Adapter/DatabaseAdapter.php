@@ -9,6 +9,23 @@ use PDO;
 class DatabaseAdapter implements DatabaseAdapterInterface
 {
     /**
+     * @var string
+     */
+    private $username;
+    /**
+     * @var string
+     */
+    private $password;
+    /**
+     * @var string
+     */
+    private $host;
+    /**
+     * @var string
+     */
+    private $port;
+
+    /**
      * @var PDO
      */
     private $databaseConnection;
@@ -19,11 +36,21 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         string $host = 'localhost',
         int $port = 3306
     ) {
-        $this->databaseConnection = new PDO(
-            "mysql:host={$host};port={$port};charset=UTF8;",
-            $username,
-            $password
-        );
+        $this->username = $username;
+        $this->password = $password;
+        $this->host = $host;
+        $this->port = $port;
+    }
+
+    private function connect(): void
+    {
+        if (is_null($this->databaseConnection)) {
+            $this->databaseConnection = new PDO(
+                "mysql:host={$this->host};port={$this->port};charset=UTF8;",
+                $this->username,
+                $this->password
+            );
+        }
     }
 
     /**
@@ -32,6 +59,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     public function dropDatabaseIfExists(string $name): void
     {
+        $this->connect();
         $result = $this->databaseConnection->exec("DROP DATABASE IF EXISTS " . $this->quoteIdentifier($name));
         if (false === $result) {
             throw new Exception\RuntimeException('Error dropping database "' . $name . '".');
@@ -44,6 +72,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     public function getDatabases(): array
     {
+        $this->connect();
         return $this->databaseConnection->query("SHOW DATABASES")->fetchAll(PDO::FETCH_COLUMN);
     }
 
@@ -52,6 +81,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     public function getDatabaseMetadata(): array
     {
+        $this->connect();
         $sql
             = "SELECT table_schema AS \"database\", 
                 SUM(data_length + index_length) AS \"size\" 
@@ -76,6 +106,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     public function getTableMetadata(string $database): array
     {
+        $this->connect();
         $sql
             = "SELECT TABLE_NAME, table_rows, (data_length + index_length) 'size'
                 FROM information_schema.TABLES
@@ -115,6 +146,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     public function databaseExists(string $database): bool
     {
+        $this->connect();
         $sql = 'SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = :database';
         $statement = $this->databaseConnection->prepare($sql);
         $statement->execute([':database' => $database]);
@@ -128,6 +160,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     public function databaseIsEmpty(string $database): bool
     {
+        $this->connect();
         $sql = 'SELECT COUNT(DISTINCT `table_name`) FROM `information_schema`.`columns` WHERE `table_schema` = :database';
         $statement = $this->databaseConnection->prepare($sql);
         $statement->execute([':database' => $database]);
@@ -142,6 +175,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     public function dropDatabase(string $database): void
     {
+        $this->connect();
         $database = str_replace('`', '', $database);
         $stmt = $this->databaseConnection->query("DROP DATABASE IF EXISTS `$database`");
         $stmt->execute();
@@ -154,6 +188,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     public function createDatabase(string $database): void
     {
+        $this->connect();
         $database = str_replace('`', '', $database);
         $stmt = $this->databaseConnection->query("CREATE DATABASE `$database`");
         $stmt->execute();
@@ -165,6 +200,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     public function run(string $query, string $database): void
     {
+        $this->connect();
         $database = str_replace('`', '', $database);
         $stmt = $this->databaseConnection->query("USE `$database`; $query");
         $stmt->execute();
