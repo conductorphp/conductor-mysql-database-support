@@ -103,7 +103,7 @@ class ExportPlugin
             . escapeshellarg($database) . ' -v 3 --no-data --triggers --events --routines --less-locking '
             . $this->getMysqldumperCommandConnectionArguments() . ' ';
 
-        if (!empty($options[self::OPTION_REMOVE_DEFINERS])) {
+        if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
             $dumpStructureCommand .= '&& find ' . escapeshellarg($database)
                 . ' -name "*-schema-triggers.sql" -exec sed -ri \'s|DEFINER=[^ ]+ *||g\' {} \;';
         }

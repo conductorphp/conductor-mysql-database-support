@@ -179,7 +179,7 @@ class ExportPlugin
             . $this->getCommandConnectionArguments() . ' '
             . '--single-transaction --quick --lock-tables=false --skip-comments --no-data --verbose ';
 
-        if (!empty($options[self::OPTION_REMOVE_DEFINERS])) {
+        if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
             $dumpStructureCommand .= '| sed "s/DEFINER=[^*]*\*/\*/g" ';
         }
 
