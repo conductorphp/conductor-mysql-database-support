@@ -119,8 +119,17 @@ class ExportPlugin
             . '--single-transaction --quick --lock-tables=false '
             . '--order-by-primary --skip-comments --no-create-db --no-create-info --skip-triggers ';
         if (!empty($options[self::OPTION_IGNORE_TABLES])) {
-            foreach ($options[self::OPTION_IGNORE_TABLES] as $table) {
-                $dumpDataCommand .= '--ignore-table=' . escapeshellarg("$database.$table") . ' ';
+            $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
+                . $this->getCommandConnectionArguments() . ' ';
+            $allTables = explode("\n", trim($this->shellAdapter->runShellCommand($command)));
+            $ignoredTables = [];
+            foreach ($options[self::OPTION_IGNORE_TABLES] as $pattern) {
+                $ignoredTables += array_filter($allTables, function ($table) use ($pattern) {
+                    return fnmatch($pattern, $table);
+                });
+            }
+            foreach ($ignoredTables as $ignoredTable) {
+                $dumpDataCommand .= '--ignore-table=' . escapeshellarg("$database.$ignoredTable") . ' ';
             }
         }
 
@@ -179,7 +188,7 @@ class ExportPlugin
             . $this->getCommandConnectionArguments() . ' '
             . '--single-transaction --quick --lock-tables=false --skip-comments --no-data --verbose ';
 
-        if (!empty($options[self::OPTION_REMOVE_DEFINERS])) {
+        if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
             $dumpStructureCommand .= '| sed "s/DEFINER=[^*]*\*/\*/g" ';
         }
 

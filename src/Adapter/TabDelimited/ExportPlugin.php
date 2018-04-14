@@ -225,7 +225,7 @@ class ExportPlugin
             . $this->getMysqlCommandConnectionArguments() . ' '
             . '--single-transaction --quick --lock-tables=false --skip-comments --no-data --verbose ';
 
-        if (!empty($options[self::OPTION_REMOVE_DEFINERS])) {
+        if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
             $dumpStructureCommand .= '| sed "s/DEFINER=[^*]*\*/\*/g" ';
         }
 
@@ -280,15 +280,14 @@ class ExportPlugin
     {
         $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
             . $this->getMysqlCommandConnectionArguments() . ' ';
-        $result = trim($this->shellAdapter->runShellCommand($command));
-        if (!$result) {
-            return [];
+        $allTables = explode("\n", trim($this->shellAdapter->runShellCommand($command)));
+        $ignoredTables = [];
+        foreach ($options[self::OPTION_IGNORE_TABLES] as $pattern) {
+            $ignoredTables += array_filter($allTables, function ($table) use ($pattern) {
+                return fnmatch($pattern, $table);
+            });
         }
-
-        $dataTables = explode("\n", $result);
-        if (!empty($options[self::OPTION_IGNORE_TABLES])) {
-            $dataTables = array_diff($dataTables, $options[self::OPTION_IGNORE_TABLES]);
-        }
+        $dataTables = array_diff($allTables, $ignoredTables);
         return $dataTables;
     }
 

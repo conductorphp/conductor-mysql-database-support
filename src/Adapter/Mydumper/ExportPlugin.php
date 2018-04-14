@@ -103,7 +103,7 @@ class ExportPlugin
             . escapeshellarg($database) . ' -v 3 --no-data --triggers --events --routines --less-locking '
             . $this->getMysqldumperCommandConnectionArguments() . ' ';
 
-        if (!empty($options[self::OPTION_REMOVE_DEFINERS])) {
+        if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
             $dumpStructureCommand .= '&& find ' . escapeshellarg($database)
                 . ' -name "*-schema-triggers.sql" -exec sed -ri \'s|DEFINER=[^ ]+ *||g\' {} \;';
         }
@@ -156,8 +156,15 @@ class ExportPlugin
             $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
                 . $this->getMysqlCommandConnectionArguments() . ' ';
             $allTables = explode("\n", trim($this->shellAdapter->runShellCommand($command)));
-            $dataTables = array_diff($allTables, $options[self::OPTION_IGNORE_TABLES]);
+            $ignoredTables = [];
+            foreach ($options[self::OPTION_IGNORE_TABLES] as $pattern) {
+                $ignoredTables += array_filter($allTables, function ($table) use ($pattern) {
+                    return fnmatch($pattern, $table);
+                });
+            }
+            $dataTables = array_diff($allTables, $ignoredTables);
         }
+
         return $dataTables;
     }
 
