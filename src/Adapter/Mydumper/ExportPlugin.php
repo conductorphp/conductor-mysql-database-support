@@ -100,7 +100,7 @@ class ExportPlugin
         # @link https://unix.stackexchange.com/questions/349894/can-i-tell-find-to-to-not-restore-initial-working-directory
 
         $dumpStructureCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
-            . escapeshellarg($database) . ' -v 3 --no-data --triggers --events --routines --less-locking '
+            . escapeshellarg($database) . ' -v 3 --no-data --triggers --events --routines --lock-all-tables '
             . $this->getMysqldumperCommandConnectionArguments() . ' ';
 
         if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
@@ -109,7 +109,7 @@ class ExportPlugin
         }
 
         $dumpDataCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
-            . escapeshellarg($database) . ' -v 3 --no-schemas --less-locking '
+            . escapeshellarg($database) . ' -v 3 --no-schemas --lock-all-tables '
             . $this->getMysqldumperCommandConnectionArguments() . ' ';
 
         $dataTables = $this->getDataTables($database, $options);
