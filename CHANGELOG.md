@@ -1,6 +1,12 @@
 Conductor: MySQL Database Support
 ============================================
 
+# 0.9.1
+- Updated conductor/core require to ~0.9.2
+
+# 0.9.0
+- Tagged for initial consistency with other modules
+
 # 0.2.0 (Unreleased)
 - Renamed to Conductor
 - Updated PHP version requirement to 7.1
