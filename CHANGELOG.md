@@ -1,6 +1,9 @@
 Conductor: MySQL Database Support
 ============================================
 
+# 0.9.2
+- Fixed license per https://spdx.org/licenses/
+
 # 0.9.1
 - Updated conductor/core require to ~0.9.2
 

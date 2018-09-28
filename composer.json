@@ -3,7 +3,7 @@
     "description": "Conductor: MySQL Database Support",
     "type": "library",
     "homepage": "https://github.com/conductorphp/mysql-database-support",
-    "license": "Apache 2.0",
+    "license": "Apache-2.0",
     "authors": [
         {
             "name": "Kirk Madera",
