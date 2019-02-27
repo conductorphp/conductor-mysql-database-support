@@ -1,6 +1,9 @@
 Conductor: MySQL Database Support
 ============================================
 
+# 0.9.3
+- Added considerations for empty MySQL password
+
 # 0.9.2
 - Fixed license per https://spdx.org/licenses/
 

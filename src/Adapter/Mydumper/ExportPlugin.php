@@ -135,11 +135,11 @@ class ExportPlugin
     private function getMysqldumperCommandConnectionArguments(): string
     {
         return sprintf(
-            '-h %s -P %s -u %s -p %s ',
+            '-h %s -P %s -u %s %s',
             escapeshellarg($this->host),
             escapeshellarg($this->port),
             escapeshellarg($this->username),
-            escapeshellarg($this->password)
+            $this->password ? '-p ' . escapeshellarg($this->password) . ' ' : ''
         );
     }
 
@@ -212,11 +212,11 @@ class ExportPlugin
     private function getMysqlCommandConnectionArguments(): string
     {
         return sprintf(
-            '-h %s -P %s -u %s -p%s ',
+            '-h %s -P %s -u %s %s',
             escapeshellarg($this->host),
             escapeshellarg($this->port),
             escapeshellarg($this->username),
-            escapeshellarg($this->password)
+            $this->password ? '-p' . escapeshellarg($this->password) . ' ' : ''
         );
     }
 

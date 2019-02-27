@@ -110,13 +110,12 @@ class ImportPlugin
      */
     private function getMysqlCommandConnectionArguments(): string
     {
-        // @todo Consider space after -p. I think for the mysql command it should be left off, but for mydumper it's needed
         return sprintf(
-            '-h %s -P %s -u %s -p %s ',
+            '-h %s -P %s -u %s %s',
             escapeshellarg($this->host),
             escapeshellarg($this->port),
             escapeshellarg($this->username),
-            escapeshellarg($this->password)
+            $this->password ? '-p ' . escapeshellarg($this->password) . ' ' : ''
         );
     }
 
