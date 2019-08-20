@@ -116,7 +116,7 @@ class ExportPlugin
         $dumpStructureCommand = $this->getDumpStructureCommand($database, $options);
         $dumpDataCommand = 'mysqldump ' . escapeshellarg($database) . ' '
             . $this->getCommandConnectionArguments() . ' '
-            . '--single-transaction --quick --lock-tables=false '
+            . '--single-transaction --quick --lock-tables=false --no-autocommit '
             . '--order-by-primary --skip-comments --no-create-db --no-create-info --skip-triggers ';
         if (!empty($options[self::OPTION_IGNORE_TABLES])) {
             $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
@@ -186,7 +186,7 @@ class ExportPlugin
     {
         $dumpStructureCommand = 'mysqldump ' . escapeshellarg($database) . ' '
             . $this->getCommandConnectionArguments() . ' '
-            . '--single-transaction --quick --lock-tables=false --skip-comments --no-data --verbose ';
+            . '--single-transaction --quick --lock-tables=false --skip-comments --no-data --no-autocommit --verbose ';
 
         if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
             $dumpStructureCommand .= '| sed "s/DEFINER=[^*]*\*/\*/g" ';

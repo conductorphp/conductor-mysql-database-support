@@ -1,6 +1,7 @@
 {
     "name": "conductor/mysql-database-support",
     "description": "Conductor: MySQL Database Support",
+    "version": "0.9.4",
     "type": "library",
     "homepage": "https://github.com/conductorphp/mysql-database-support",
     "license": "Apache-2.0",

@@ -1,6 +1,10 @@
 Conductor: MySQL Database Support
 ============================================
 
+# 0.9.4
+- Added --no-autocommit flag to mysqldump commands
+- Added version to composer.json
+
 # 0.9.3
 - Added considerations for empty MySQL password
 
