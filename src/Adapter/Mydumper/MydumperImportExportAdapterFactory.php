@@ -5,9 +5,9 @@ namespace ConductorMySqlSupport\Adapter\Mydumper;
 use ConductorMySqlSupport\Exception;
 use Interop\Container\ContainerInterface;
 use Interop\Container\Exception\ContainerException;
-use Zend\ServiceManager\Exception\ServiceNotCreatedException;
-use Zend\ServiceManager\Exception\ServiceNotFoundException;
-use Zend\ServiceManager\Factory\FactoryInterface;
+use Laminas\ServiceManager\Exception\ServiceNotCreatedException;
+use Laminas\ServiceManager\Exception\ServiceNotFoundException;
+use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class MydumperImportExportAdapterFactory implements FactoryInterface
 {
