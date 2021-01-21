@@ -101,12 +101,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/conductorphp/conductor-core.git",
-                "reference": "25fbdce2b313cf1bda9a57f9f6964ad5eef73f98"
+                "reference": "409160907323d44fa2248277c7f9d3c0c4e8e5d8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/conductorphp/conductor-core/zipball/25fbdce2b313cf1bda9a57f9f6964ad5eef73f98",
-                "reference": "25fbdce2b313cf1bda9a57f9f6964ad5eef73f98",
+                "url": "https://api.github.com/repos/conductorphp/conductor-core/zipball/409160907323d44fa2248277c7f9d3c0c4e8e5d8",
+                "reference": "409160907323d44fa2248277c7f9d3c0c4e8e5d8",
                 "shasum": ""
             },
             "require": {
@@ -163,13 +163,13 @@
                     "role": "Architect"
                 }
             ],
-            "description": "Conductor: Core",
+            "description": "Conductor Core",
             "homepage": "https://github.com/conductorphp/conductor-core",
             "support": {
                 "issues": "https://github.com/conductorphp/conductor-core/issues",
                 "source": "https://github.com/conductorphp/conductor-core/tree/1.0.0"
             },
-            "time": "2021-01-21T21:13:29+00:00"
+            "time": "2021-01-21T22:55:33+00:00"
         },
         {
             "name": "container-interop/container-interop",
