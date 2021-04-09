@@ -104,8 +104,10 @@ class ExportPlugin
             . $this->getMysqldumperCommandConnectionArguments() . ' ';
 
         if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
+            // Replace definer in triggers and views with CURRENT_USER
             $dumpStructureCommand .= '&& find ' . escapeshellarg($database)
-                . ' -name "*-schema-triggers.sql" -exec sed -ri \'s|DEFINER=[^ ]+ *||g\' {} \;';
+                . ' \( -name "*-schema-view.sql" -o -name "*-schema-triggers.sql" \)'
+                . ' -exec sed -ri \'s|DEFINER=[^ ]+ |DEFINER=CURRENT_USER |g\' {} \;';
         }
 
         $dumpDataCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '

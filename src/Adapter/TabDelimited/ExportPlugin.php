@@ -226,7 +226,8 @@ class ExportPlugin
             . '--single-transaction --quick --lock-tables=false --skip-comments --no-data --verbose ';
 
         if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
-            $dumpStructureCommand .= '| sed "s/DEFINER=[^*]*\*/\*/g" ';
+            // Replace definer with CURRENT_USER
+            $dumpStructureCommand .= '| sed "s|DEFINER=[^ ]+ |DEFINER=CURRENT_USER |g" ';
         }
 
         return $dumpStructureCommand;
