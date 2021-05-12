@@ -1,6 +1,12 @@
 Conductor: MySQL Database Support
 ============================================
 
+## [0.9.5] - 2021-05-12
+### Fixed
+- Fixed replace of definers in all export plugins.
+- Updated to replace with CURRENT_USER instead of removing entirely.
+- Updated MyDumper export plugin to also replace definers in views.
+
 # 0.9.4
 - Added --no-autocommit flag to mysqldump commands
 - Added version to composer.json
