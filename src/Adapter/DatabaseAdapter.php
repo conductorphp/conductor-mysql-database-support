@@ -118,7 +118,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      */
     private function quoteIdentifier(string $identifier): string
     {
-        return '`' . preg_replace('/[^A-Za-z0-9_]+/', '', $identifier) . '`';
+        return ('`' . trim(str_replace('`', '', $identifier)) . '`');
     }
 
     /**
