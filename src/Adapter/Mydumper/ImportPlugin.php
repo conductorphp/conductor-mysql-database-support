@@ -37,11 +37,11 @@ class ImportPlugin
 
 
     public function __construct(
+        ShellAdapterInterface $shellAdapter,
         string $username,
         string $password,
         string $host = 'localhost',
         int $port = 3306,
-        ShellAdapterInterface $shellAdapter,
         LoggerInterface $logger = null
     ) {
         if (is_null($logger)) {

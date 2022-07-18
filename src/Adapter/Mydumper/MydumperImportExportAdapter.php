@@ -40,11 +40,11 @@ class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterfac
         }
 
         if (is_null($importPlugin)) {
-            $importPlugin = new ImportPlugin($username, $password, $host, $port, $shellAdapter, $logger);
+            $importPlugin = new ImportPlugin($shellAdapter, $username, $password, $host, $port, $logger);
         }
         $this->importPlugin = $importPlugin;
         if (is_null($exportPlugin)) {
-            $exportPlugin = new ExportPlugin($username, $password, $host, $port, $shellAdapter, $logger);
+            $exportPlugin = new ExportPlugin($shellAdapter, $username, $password, $host, $port, $logger);
         }
         $this->exportPlugin = $exportPlugin;
     }
