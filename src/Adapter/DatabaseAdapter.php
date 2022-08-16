@@ -2,8 +2,8 @@
 
 namespace ConductorMySqlSupport\Adapter;
 
-use ConductorMySqlSupport\Exception;
 use ConductorCore\Database\DatabaseAdapterInterface;
+use ConductorMySqlSupport\Exception;
 use PDO;
 use PDOStatement;
 
@@ -19,7 +19,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         string $username,
         string $password,
         string $host = 'localhost',
-        int $port = 3306
+        int    $port = 3306
     ) {
         $this->username = $username;
         $this->password = $password;
@@ -55,7 +55,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         $databases = [];
         foreach ($statement->fetchAll() as $row) {
             $databases[$row['database']] = [
-                'size' => $row['size']
+                'size' => $row['size'],
             ];
         }
         return $databases;
@@ -73,7 +73,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         foreach ($statement->fetchAll() as $row) {
             $tableSizes[$row['TABLE_NAME']] = [
                 'rows' => $row['table_rows'],
-                'size' => $row['size']
+                'size' => $row['size'],
             ];
         }
 
@@ -89,14 +89,14 @@ class DatabaseAdapter implements DatabaseAdapterInterface
     {
         $sql = 'SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = :database';
         $statement = $this->runQuery($sql, [':database' => $database]);
-        return (bool) $statement->fetchColumn();
+        return (bool)$statement->fetchColumn();
     }
 
     public function databaseIsEmpty(string $database): bool
     {
         $sql = 'SELECT COUNT(DISTINCT `table_name`) FROM `information_schema`.`columns` WHERE `table_schema` = :database';
         $statement = $this->runQuery($sql, [':database' => $database]);
-        $numTables = (int) $statement->fetchColumn();
+        $numTables = (int)$statement->fetchColumn();
         return $numTables === 0;
     }
 

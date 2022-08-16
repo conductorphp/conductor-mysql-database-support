@@ -8,6 +8,7 @@ use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use RuntimeException;
 
 class ExportPlugin
 {
@@ -24,11 +25,11 @@ class ExportPlugin
 
     public function __construct(
         ShellAdapterInterface $shellAdapter,
-        string $username,
-        string $password,
-        string $host = 'localhost',
-        int $port = 3306,
-        ?LoggerInterface $logger = null
+        string                $username,
+        string                $password,
+        string                $host = 'localhost',
+        int                   $port = 3306,
+        ?LoggerInterface      $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -84,7 +85,7 @@ class ExportPlugin
     public function exportToFile(
         string $database,
         string $path,
-        array $options = []
+        array  $options = []
     ): string {
         $workingDir = $this->prepareWorkingDirectory($path);
         $path = realpath($path);
@@ -112,7 +113,7 @@ class ExportPlugin
     private function getTabDelimitedFileExportCommand(
         string $database,
         string $workingDir,
-        array $options
+        array  $options
     ): string {
         $dumpStructureCommand = $this->getDumpStructureCommand($database, $options)
             . '> ' . escapeshellarg("$workingDir/schema.sql");
@@ -195,8 +196,8 @@ class ExportPlugin
     }
 
     /**
-     * @throws Exception\RuntimeException If path is not writable
      * @return string Working directory
+     * @throws Exception\RuntimeException If path is not writable
      */
     private function prepareWorkingDirectory(string $path): string
     {
@@ -212,7 +213,7 @@ class ExportPlugin
         $workingDir = realpath($path) . '/' . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
         if (!is_dir($workingDir)) {
             if (!mkdir($workingDir) && !is_dir($workingDir)) {
-                throw new \RuntimeException(sprintf('Directory "%s" was not created', $workingDir));
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $workingDir));
             }
         }
         return $workingDir;

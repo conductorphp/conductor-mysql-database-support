@@ -23,11 +23,11 @@ class ExportPlugin
 
     public function __construct(
         ShellAdapterInterface $shellAdapter,
-        string $username,
-        string $password,
-        string $host = 'localhost',
-        int $port = 3306,
-        ?LoggerInterface $logger = null
+        string                $username,
+        string                $password,
+        string                $host = 'localhost',
+        int                   $port = 3306,
+        ?LoggerInterface      $logger = null
     ) {
         $this->username = $username;
         $this->password = $password;
@@ -81,7 +81,7 @@ class ExportPlugin
     public function exportToFile(
         string $database,
         string $path,
-        array $options = []
+        array  $options = []
     ): string {
         $this->prepareWorkingDirectory($path);
         $path = realpath($path);

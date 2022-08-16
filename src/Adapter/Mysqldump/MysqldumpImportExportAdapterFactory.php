@@ -4,15 +4,12 @@ namespace ConductorMySqlSupport\Adapter\Mysqldump;
 
 use ConductorMySqlSupport\Adapter\Mydumper\MydumperImportExportAdapter;
 use ConductorMySqlSupport\Exception;
-use Interop\Container\ContainerInterface;
-use Interop\Container\Exception\ContainerException;
-use Laminas\ServiceManager\Exception\ServiceNotCreatedException;
-use Laminas\ServiceManager\Exception\ServiceNotFoundException;
 use Laminas\ServiceManager\Factory\FactoryInterface;
+use Psr\Container\ContainerInterface;
 
 class MysqldumpImportExportAdapterFactory implements FactoryInterface
 {
-    public function __invoke(\Psr\Container\ContainerInterface $container, $requestedName, ?array $options = null): MysqldumpImportExportAdapter
+    public function __invoke(ContainerInterface $container, $requestedName, ?array $options = null): MysqldumpImportExportAdapter
     {
         $this->validateOptions($options);
 

@@ -3,15 +3,12 @@
 namespace ConductorMySqlSupport\Adapter\Mydumper;
 
 use ConductorMySqlSupport\Exception;
-use Interop\Container\ContainerInterface;
-use Interop\Container\Exception\ContainerException;
-use Laminas\ServiceManager\Exception\ServiceNotCreatedException;
-use Laminas\ServiceManager\Exception\ServiceNotFoundException;
 use Laminas\ServiceManager\Factory\FactoryInterface;
+use Psr\Container\ContainerInterface;
 
 class MydumperImportExportAdapterFactory implements FactoryInterface
 {
-    public function __invoke(\Psr\Container\ContainerInterface $container, $requestedName, ?array $options = null): MydumperImportExportAdapter
+    public function __invoke(ContainerInterface $container, $requestedName, ?array $options = null): MydumperImportExportAdapter
     {
         $this->validateOptions($options);
 

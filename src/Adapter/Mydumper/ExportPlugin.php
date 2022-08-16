@@ -8,6 +8,7 @@ use ConductorMySqlSupport\Exception;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use RuntimeException;
 
 class ExportPlugin
 {
@@ -24,11 +25,11 @@ class ExportPlugin
 
     public function __construct(
         ShellAdapterInterface $shellAdapter,
-        string $username,
-        string $password,
-        string $host = 'localhost',
-        int $port = 3306,
-        ?LoggerInterface $logger = null
+        string                $username,
+        string                $password,
+        string                $host = 'localhost',
+        int                   $port = 3306,
+        ?LoggerInterface      $logger = null
     ) {
         $this->username = $username;
         $this->password = $password;
@@ -44,7 +45,7 @@ class ExportPlugin
     public function exportToFile(
         string $database,
         string $path,
-        array $options = []
+        array  $options = []
     ): string {
         $workingDir = $this->prepareWorkingDirectory($path);
         $path = realpath($path);
@@ -95,7 +96,7 @@ class ExportPlugin
         // @todo Move this to somewhere else. This is specific to a known Magento issue
         // Avoid issue with tables that defaults timestamp fields to '0000-00-00 00:00:00', which cause on error on
         // import
-        $fixTimestampDefaultIssueCommand = 'find ' .  escapeshellarg($database)
+        $fixTimestampDefaultIssueCommand = 'find ' . escapeshellarg($database)
             . ' -name "*.sql" -exec sed -ri "s|(timestamp\|datetime) (NOT )?NULL DEFAULT '
             . '\'0000-00-00 00:00:00\'|\1 \2NULL DEFAULT CURRENT_TIMESTAMP|gI" {} \;';
 
@@ -135,8 +136,8 @@ class ExportPlugin
     }
 
     /**
-     * @throws Exception\RuntimeException If path is not writable
      * @return string Working directory
+     * @throws Exception\RuntimeException If path is not writable
      */
     private function prepareWorkingDirectory(string $path): string
     {
@@ -183,7 +184,7 @@ class ExportPlugin
     {
         try {
             if (!is_callable('exec')) {
-                throw new \RuntimeException('the "exec" function is not callable.');
+                throw new RuntimeException('the "exec" function is not callable.');
             }
 
             $requiredFunctions = [

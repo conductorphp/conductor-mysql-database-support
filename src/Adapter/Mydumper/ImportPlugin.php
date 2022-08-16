@@ -20,11 +20,11 @@ class ImportPlugin
 
     public function __construct(
         ShellAdapterInterface $shellAdapter,
-        string $username,
-        string $password,
-        string $host = 'localhost',
-        int $port = 3306,
-        ?LoggerInterface $logger = null
+        string                $username,
+        string                $password,
+        string                $host = 'localhost',
+        int                   $port = 3306,
+        ?LoggerInterface      $logger = null
     ) {
         $this->username = $username;
         $this->password = $password;
@@ -40,7 +40,7 @@ class ImportPlugin
     public function importFromFile(
         string $filename,
         string $database,
-        array $options = []
+        array  $options = []
     ): void {
         $this->logger->info("Importing file $filename into database $database");
         $this->assertIsUsable();
@@ -87,8 +87,8 @@ class ImportPlugin
 
 
     /**
-     * @throws Exception\RuntimeException If file extension or format invalid
      * @return string Extracted directory path
+     * @throws Exception\RuntimeException If file extension or format invalid
      */
     private function extractAndValidateImportFile(string $filename): string
     {

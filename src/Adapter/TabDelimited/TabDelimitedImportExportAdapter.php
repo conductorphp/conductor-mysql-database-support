@@ -16,14 +16,14 @@ class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInte
     private ExportPlugin $exportPlugin;
 
     public function __construct(
-        string $username,
-        string $password,
-        string $host = 'localhost',
-        int $port = 3306,
+        string                 $username,
+        string                 $password,
+        string                 $host = 'localhost',
+        int                    $port = 3306,
         ?ShellAdapterInterface $shellAdapter = null,
-        ?ImportPlugin $importPlugin = null,
-        ?ExportPlugin $exportPlugin = null,
-        ?LoggerInterface $logger = null
+        ?ImportPlugin          $importPlugin = null,
+        ?ExportPlugin          $exportPlugin = null,
+        ?LoggerInterface       $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -45,7 +45,7 @@ class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInte
     public function importFromFile(
         string $filename,
         string $database,
-        array $options = []
+        array  $options = []
     ): void {
         $this->importPlugin->importFromFile($filename, $database, $options);
     }
@@ -53,7 +53,7 @@ class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInte
     public function exportToFile(
         string $database,
         string $path,
-        array $options = []
+        array  $options = []
     ): string {
         return $this->exportPlugin->exportToFile($database, $path, $options);
     }
