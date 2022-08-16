@@ -1,7 +1,7 @@
 Conductor MySQL Database Support
 ================================
 
-This module adds support for MySQL databases in 
+This module adds support for MySQL databases in
 [Conductor](https://github.com/conductorphp/conductor-core).
 
 * [Documentation](docs/index.md)
