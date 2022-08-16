@@ -12,29 +12,23 @@ use Psr\Log\NullLogger;
 
 class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterface, LoggerAwareInterface
 {
-    /**
-     * @var ImportPlugin
-     */
-    private $importPlugin;
-    /**
-     * @var ExportPlugin
-     */
-    private $exportPlugin;
-
+    private ImportPlugin $importPlugin;
+    private ExportPlugin $exportPlugin;
 
     public function __construct(
         string $username,
         string $password,
         string $host = 'localhost',
         int $port = 3306,
-        ShellAdapterInterface $shellAdapter = null,
-        ImportPlugin $importPlugin = null,
-        ExportPlugin $exportPlugin = null,
-        LoggerInterface $logger = null
+        ?ShellAdapterInterface $shellAdapter = null,
+        ?ImportPlugin $importPlugin = null,
+        ?ExportPlugin $exportPlugin = null,
+        ?LoggerInterface $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
+
         if (is_null($shellAdapter)) {
             $shellAdapter = new LocalShellAdapter($logger);
         }
@@ -49,9 +43,6 @@ class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterfac
         $this->exportPlugin = $exportPlugin;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function importFromFile(
         string $filename,
         string $database,
@@ -60,9 +51,6 @@ class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterfac
         $this->importPlugin->importFromFile($filename, $database, $options);
     }
 
-    /**
-     * @inheritdoc
-     */
     public function exportToFile(
         string $database,
         string $path,
@@ -71,17 +59,11 @@ class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterfac
         return $this->exportPlugin->exportToFile($database, $path, $options);
     }
 
-    /**
-     * @return string
-     */
     public static function getFileExtension(): string
     {
         return 'tgz';
     }
 
-    /**
-     * @inheritdoc
-     */
     public function assertIsUsable(): void
     {
         try {
@@ -90,16 +72,14 @@ class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterfac
         } catch (\Exception $e) {
             throw new Exception\RuntimeException(
                 sprintf(
-                    __CLASS__
-                    . ' is not usable in this environment because ' . $e->getMessage()
+                    '%s is not usable in this environment because %s.',
+                    __CLASS__,
+                    $e->getMessage()
                 )
             );
         }
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->importPlugin->setLogger($logger);

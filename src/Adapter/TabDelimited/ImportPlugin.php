@@ -11,30 +11,12 @@ use Psr\Log\NullLogger;
 
 class ImportPlugin
 {
-    /**
-     * @var string
-     */
-    private $username;
-    /**
-     * @var string
-     */
-    private $password;
-    /**
-     * @var string
-     */
-    private $host;
-    /**
-     * @var int
-     */
-    private $port;
-    /**
-     * @var ShellAdapterInterface
-     */
-    private $shellAdapter;
-    /**
-     * @var null|LoggerInterface
-     */
-    private $logger;
+    private string $username;
+    private string $password;
+    private string $host;
+    private int $port;
+    private ShellAdapterInterface $shellAdapter;
+    private LoggerInterface $logger;
 
 
     public function __construct(
@@ -43,7 +25,7 @@ class ImportPlugin
         string $password,
         string $host = 'localhost',
         int $port = 3306,
-        LoggerInterface $logger = null
+        ?LoggerInterface $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -57,14 +39,11 @@ class ImportPlugin
         $this->logger = $logger;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function assertIsUsable(): void
     {
         try {
             if (!is_callable('exec')) {
-                throw new \Exception('the "exec" function is not callable.');
+                throw new Exception\RuntimeException('the "exec" function is not callable.');
             }
 
             $requiredFunctions = [
@@ -75,13 +54,13 @@ class ImportPlugin
             $missingFunctions = [];
             foreach ($requiredFunctions as $requiredFunction) {
                 exec('which ' . escapeshellarg($requiredFunction) . ' &> /dev/null', $output, $return);
-                if (0 != $return) {
+                if (0 !== $return) {
                     $missingFunctions[] = $requiredFunction;
                 }
             }
 
             if ($missingFunctions) {
-                throw new \Exception(
+                throw new Exception\RuntimeException(
                     sprintf(
                         'the "%s" shell function(s) are not available.',
                         implode('", "', $missingFunctions)
@@ -91,16 +70,14 @@ class ImportPlugin
         } catch (\Exception $e) {
             throw new Exception\RuntimeException(
                 sprintf(
-                    __CLASS__
-                    . ' is not usable in this environment because ' . $e->getMessage()
+                    '%s is not usable in this environment because %s.',
+                    __CLASS__,
+                    $e->getMessage()
                 )
             );
         }
     }
 
-    /**
-     * @inheritdoc
-     */
     public function importFromFile(
         string $filename,
         string $database,
@@ -121,12 +98,6 @@ class ImportPlugin
         }
     }
 
-    /**
-     * @param string $database
-     * @param string $extractedDir
-     *
-     * @return string
-     */
     private function getTabDelimitedFileImportCommand(string $database, string $extractedDir): string
     {
         $importSchemaCommand = 'mysql ' . escapeshellarg($database) . ' '
@@ -147,9 +118,6 @@ class ImportPlugin
         return $command;
     }
 
-    /**
-     * @return string
-     */
     private function getMysqlCommandConnectionArguments(): string
     {
         return sprintf(
@@ -162,14 +130,12 @@ class ImportPlugin
     }
 
     /**
-     * @param string $filename
-     *
      * @throws Exception\RuntimeException If file extension or format invalid
      * @return string Extracted directory path
      */
     private function extractAndValidateImportFile(string $filename): string
     {
-        if (0 != strcasecmp('.tgz', substr($filename, -4))) {
+        if (0 !== strcasecmp('.tgz', substr($filename, -4))) {
             throw new Exception\RuntimeException('Invalid file extension. Should be .tgz.');
         }
 
@@ -190,8 +156,6 @@ class ImportPlugin
     }
 
     /**
-     * @param array $options
-     *
      * @throws Exception\DomainException If invalid options provided
      */
     private function validateOptions(array $options): void
@@ -201,9 +165,6 @@ class ImportPlugin
         }
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         if ($this->shellAdapter instanceof LoggerAwareInterface) {

@@ -11,21 +11,7 @@ use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class MydumperImportExportAdapterFactory implements FactoryInterface
 {
-
-    /**
-     * Create an object
-     *
-     * @param  ContainerInterface $container
-     * @param  string             $requestedName
-     * @param  null|array         $options
-     *
-     * @return object
-     * @throws ServiceNotFoundException if unable to resolve the service.
-     * @throws ServiceNotCreatedException if an exception is raised when
-     *     creating a service.
-     * @throws ContainerException if any other error occurs
-     */
-    public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
+    public function __invoke(\Psr\Container\ContainerInterface $container, $requestedName, ?array $options = null): MydumperImportExportAdapter
     {
         $this->validateOptions($options);
 
@@ -38,8 +24,6 @@ class MydumperImportExportAdapterFactory implements FactoryInterface
     }
 
     /**
-     * @param array $options
-     *
      * @throws Exception\InvalidArgumentException if options are invalid
      */
     private function validateOptions(array $options): void

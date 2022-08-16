@@ -12,14 +12,8 @@ use Psr\Log\NullLogger;
 
 class MysqldumpImportExportAdapter implements DatabaseImportExportAdapterInterface, LoggerAwareInterface
 {
-    /**
-     * @var ImportPlugin
-     */
-    private $importPlugin;
-    /**
-     * @var ExportPlugin
-     */
-    private $exportPlugin;
+    private ImportPlugin $importPlugin;
+    private ExportPlugin $exportPlugin;
 
 
     public function __construct(
@@ -30,7 +24,7 @@ class MysqldumpImportExportAdapter implements DatabaseImportExportAdapterInterfa
         ShellAdapterInterface $shellAdapter = null,
         ImportPlugin $importPlugin = null,
         ExportPlugin $exportPlugin = null,
-        LoggerInterface $logger = null
+        ?LoggerInterface $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -49,9 +43,6 @@ class MysqldumpImportExportAdapter implements DatabaseImportExportAdapterInterfa
         $this->exportPlugin = $exportPlugin;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function importFromFile(
         string $filename,
         string $database,
@@ -60,9 +51,6 @@ class MysqldumpImportExportAdapter implements DatabaseImportExportAdapterInterfa
         $this->importPlugin->importFromFile($filename, $database, $options);
     }
 
-    /**
-     * @inheritdoc
-     */
     public function exportToFile(
         string $database,
         string $path,
@@ -71,17 +59,11 @@ class MysqldumpImportExportAdapter implements DatabaseImportExportAdapterInterfa
         return $this->exportPlugin->exportToFile($database, $path, $options);
     }
 
-    /**
-     * @return string
-     */
     public static function getFileExtension(): string
     {
         return 'sql.gz';
     }
 
-    /**
-     * @inheritdoc
-     */
     public function assertIsUsable(): void
     {
         try {
@@ -90,16 +72,14 @@ class MysqldumpImportExportAdapter implements DatabaseImportExportAdapterInterfa
         } catch (\Exception $e) {
             throw new Exception\RuntimeException(
                 sprintf(
-                    __CLASS__
-                    . ' is not usable in this environment because ' . $e->getMessage()
+                    '%s is not usable in this environment because %s.',
+                    __CLASS__,
+                    $e->getMessage()
                 )
             );
         }
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->importPlugin->setLogger($logger);

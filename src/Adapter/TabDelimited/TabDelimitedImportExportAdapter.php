@@ -12,24 +12,18 @@ use Psr\Log\NullLogger;
 
 class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInterface, LoggerAwareInterface
 {
-    /**
-     * @var ImportPlugin
-     */
-    private $importPlugin;
-    /**
-     * @var ExportPlugin
-     */
-    private $exportPlugin;
+    private ImportPlugin $importPlugin;
+    private ExportPlugin $exportPlugin;
 
     public function __construct(
         string $username,
         string $password,
         string $host = 'localhost',
         int $port = 3306,
-        ShellAdapterInterface $shellAdapter = null,
-        ImportPlugin $importPlugin = null,
-        ExportPlugin $exportPlugin = null,
-        LoggerInterface $logger = null
+        ?ShellAdapterInterface $shellAdapter = null,
+        ?ImportPlugin $importPlugin = null,
+        ?ExportPlugin $exportPlugin = null,
+        ?LoggerInterface $logger = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -48,9 +42,6 @@ class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInte
         $this->exportPlugin = $exportPlugin;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function importFromFile(
         string $filename,
         string $database,
@@ -59,9 +50,6 @@ class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInte
         $this->importPlugin->importFromFile($filename, $database, $options);
     }
 
-    /**
-     * @inheritdoc
-     */
     public function exportToFile(
         string $database,
         string $path,
@@ -70,17 +58,11 @@ class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInte
         return $this->exportPlugin->exportToFile($database, $path, $options);
     }
 
-    /**
-     * @return string
-     */
     public static function getFileExtension(): string
     {
         return 'tgz';
     }
 
-    /**
-     * @inheritdoc
-     */
     public function assertIsUsable(): void
     {
         try {
@@ -89,16 +71,14 @@ class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInte
         } catch (\Exception $e) {
             throw new Exception\RuntimeException(
                 sprintf(
-                    __CLASS__
-                    . ' is not usable in this environment because ' . $e->getMessage()
+                    '%s is not usable in this environment because %s.',
+                    __CLASS__,
+                    $e->getMessage()
                 )
             );
         }
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->importPlugin->setLogger($logger);

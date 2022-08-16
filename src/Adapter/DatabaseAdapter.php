@@ -9,27 +9,11 @@ use PDOStatement;
 
 class DatabaseAdapter implements DatabaseAdapterInterface
 {
-    /**
-     * @var string
-     */
-    private $username;
-    /**
-     * @var string
-     */
-    private $password;
-    /**
-     * @var string
-     */
-    private $host;
-    /**
-     * @var string
-     */
-    private $port;
-
-    /**
-     * @var PDO
-     */
-    private $databaseConnection;
+    private string $username;
+    private string $password;
+    private string $host;
+    private string $port;
+    private PDO $databaseConnection;
 
     public function __construct(
         string $username,
@@ -44,8 +28,6 @@ class DatabaseAdapter implements DatabaseAdapterInterface
     }
 
     /**
-     * @param string $database
-     *
      * @throws Exception\RuntimeException If error dropping db or db does not exist
      */
     public function dropDatabaseIfExists(string $database): void
@@ -56,19 +38,11 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         }
     }
 
-    /**
-     *
-     * @return string[]
-     */
     public function getDatabases(): array
     {
-        $statement = $this->runQuery("SHOW DATABASES");
-        return $statement->fetchAll(PDO::FETCH_COLUMN);
+        return $this->runQuery("SHOW DATABASES")->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    /**
-     * @return array
-     */
     public function getDatabaseMetadata(): array
     {
         $sql
@@ -87,11 +61,6 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         return $databases;
     }
 
-    /**
-     * @param string $database
-     *
-     * @return array
-     */
     public function getTableMetadata(string $database): array
     {
         $sql
@@ -111,21 +80,11 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         return $tableSizes;
     }
 
-    /**
-     * @param string $identifier
-     *
-     * @return string
-     */
     private function quoteIdentifier(string $identifier): string
     {
         return '`' . preg_replace('/[^A-Za-z0-9_]+/', '', $identifier) . '`';
     }
 
-    /**
-     * @param string $database
-     *
-     * @return bool
-     */
     public function databaseExists(string $database): bool
     {
         $sql = 'SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = :database';
@@ -133,43 +92,24 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         return (bool) $statement->fetchColumn();
     }
 
-    /**
-     * @param string $database
-     *
-     * @return bool
-     */
     public function databaseIsEmpty(string $database): bool
     {
         $sql = 'SELECT COUNT(DISTINCT `table_name`) FROM `information_schema`.`columns` WHERE `table_schema` = :database';
         $statement = $this->runQuery($sql, [':database' => $database]);
         $numTables = (int) $statement->fetchColumn();
-        return $numTables == 0;
+        return $numTables === 0;
     }
 
-    /**
-     * @param string $database
-     *
-     * @return void
-     */
     public function dropDatabase(string $database): void
     {
         $this->runQuery("DROP DATABASE " . $this->quoteIdentifier($database));
     }
 
-    /**
-     * @param string $database
-     *
-     * @return void
-     */
     public function createDatabase(string $database): void
     {
         $this->runQuery("CREATE DATABASE " . $this->quoteIdentifier($database));
     }
 
-    /**
-     * @param string $query
-     * @param string $database
-     */
     public function run(string $query, string $database): void
     {
         $database = str_replace('`', '', $database);
@@ -177,13 +117,6 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         $this->runQuery($query);
     }
 
-    /**
-     * @param string $query
-     * @param array|null $data
-     *
-     * @return PDOStatement
-     * @throws Exception\RuntimeException on error
-     */
     private function runQuery(string $query, array $data = null): PDOStatement
     {
         $this->connect();
@@ -203,7 +136,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
 
     private function connect(): void
     {
-        if (is_null($this->databaseConnection)) {
+        if (!isset($this->databaseConnection)) {
             $this->databaseConnection = new PDO(
                 "mysql:host={$this->host};port={$this->port};charset=UTF8;",
                 $this->username,
