@@ -116,9 +116,34 @@ class DatabaseAdapter implements DatabaseAdapterInterface
      *
      * @return string
      */
+    private function quoteIdentifierSegment(string $identifier): string
+    {
+        return ('`' . trim(str_replace('`', '', $identifier)) . '`');
+    }
+
+    /**
+     * @param string $identifier
+     *
+     * @return string
+     */
     private function quoteIdentifier(string $identifier): string
     {
-        return '`' . preg_replace('/[^A-Za-z0-9_]+/', '', $identifier) . '`';
+        {
+            if (is_string($identifier)) {
+                $identifier = explode('.', $identifier);
+            }
+            if (is_array($identifier)) {
+                $segments = [];
+                foreach ($identifier as $segment) {
+                    $segments[] = $this->quoteIdentifierSegment($segment);
+
+                }
+                $quoted = implode('.', $segments);
+            } else {
+                $quoted = $this->quoteIdentifierSegment($identifier);
+            }
+            return $quoted;
+        }
     }
 
     /**
