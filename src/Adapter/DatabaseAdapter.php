@@ -20,7 +20,8 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         string $password,
         string $host = 'localhost',
         int    $port = 3306
-    ) {
+    )
+    {
         $this->username = $username;
         $this->password = $password;
         $this->host = $host;
@@ -36,6 +37,31 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         if (0 === $statement->rowCount()) {
             throw new Exception\RuntimeException('Error dropping database "' . $database . '".');
         }
+    }
+
+    private function runQuery(string $query, array $data = null): PDOStatement
+    {
+        $this->connect();
+        $statement = $this->databaseConnection->prepare($query);
+        $statement->execute($data);
+
+        return $statement;
+    }
+
+    private function connect(): void
+    {
+        if (!isset($this->databaseConnection)) {
+            $this->databaseConnection = new PDO(
+                "mysql:host={$this->host};port={$this->port};charset=UTF8;",
+                $this->username,
+                $this->password
+            );
+        }
+    }
+
+    private function quoteIdentifier(string $identifier): string
+    {
+        return '`' . preg_replace('/[^A-Za-z0-9_]+/', '', $identifier) . '`';
     }
 
     public function getDatabases(): array
@@ -80,11 +106,6 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         return $tableSizes;
     }
 
-    private function quoteIdentifier(string $identifier): string
-    {
-        return '`' . preg_replace('/[^A-Za-z0-9_]+/', '', $identifier) . '`';
-    }
-
     public function databaseExists(string $database): bool
     {
         $sql = 'SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = :database';
@@ -110,38 +131,39 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         $this->runQuery("CREATE DATABASE " . $this->quoteIdentifier($database));
     }
 
-    public function run(string $query, string $database): void
+    /**
+     * PDO does not have a clean way to run sql from a file or to run multiple SQL lines. We have to parse the SQL.
+     */
+    public function run(string $sql, string $database): void
     {
         $database = str_replace('`', '', $database);
         $this->runQuery("USE `$database`");
-        $this->runQuery($query);
-    }
 
-    private function runQuery(string $query, array $data = null): PDOStatement
-    {
-        $this->connect();
-        $statement = $this->databaseConnection->prepare($query);
-        if (false === $statement->execute($data)) {
-            $message = sprintf("Error running query: %s\nError Code: %s\nError: %s",
-                $statement->queryString,
-                $statement->errorCode(),
-                $statement->errorInfo()[2]
-            );
+        // Remove single-line comments (starting with --)
+        $sql = preg_replace('/--.*$/m', '', $sql); // Matches -- to end of line
 
-            throw new Exception\RuntimeException($message);
-        }
+        // Remove multi-line comments (starting with /* and ending with */)
+        $sql = preg_replace('/\/\*.*?\*\//s', '', $sql); // Non-greedy match for /*...*/
 
-        return $statement;
-    }
+        // Escape the semicolons inside the quoted strings by replacing them temporarily
+        /** @var string $sql */
+        $sql = preg_replace_callback('/(["\'])((?:\\1|.)*?)\1/', static function($matches) {
+            return str_replace(';', '__SEMICOLON__', $matches[0]);
+        }, $sql);
 
-    private function connect(): void
-    {
-        if (!isset($this->databaseConnection)) {
-            $this->databaseConnection = new PDO(
-                "mysql:host={$this->host};port={$this->port};charset=UTF8;",
-                $this->username,
-                $this->password
-            );
+        // Trim any leading/trailing whitespace
+        $sql = trim($sql);
+
+        // Split queries based on semicolon (SQL statements should end with a semicolon)
+        $queries = array_filter(array_map('trim', explode(';', $sql)));
+
+        // Now, restore semicolons inside the strings
+        $queries = array_map(static function($query) {
+            return str_replace('__SEMICOLON__', ';', $query);
+        }, $queries);
+
+        foreach ($queries as $query) {
+            $this->runQuery($query);
         }
     }
 }
