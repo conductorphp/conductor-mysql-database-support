@@ -86,7 +86,7 @@ class ExportPlugin
         }
 
         $dumpDataCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
-            . escapeshellarg($database) . ' --merge -v 3 --no-schemas --sync-thread-lock-mode=LOCK_ALL '
+            . escapeshellarg($database) . ' --merge -v 3 --no-schemas '
             . '--sync-thread-lock-mode=LOCK_ALL '
             . $this->getMysqldumperCommandConnectionArguments() . ' ';
 
@@ -137,6 +137,12 @@ class ExportPlugin
                 });
             }
             $dataTables = array_diff($allTables, $ignoredTables);
+
+            $mappedTables = [];
+            foreach ($dataTables as $table) {
+                $mappedTables[] = $database . '.' . $table;
+            }
+            $dataTables = $mappedTables;
         }
 
         return $dataTables;
