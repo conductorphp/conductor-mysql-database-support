@@ -124,7 +124,12 @@ class ExportPlugin
         if (!empty($options[self::OPTION_IGNORE_TABLES])) {
             $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
                 . $this->getMysqlCommandConnectionArguments() . ' ';
-            $allTables = explode("\n", trim($this->shellAdapter->runShellCommand($command)));
+            $tables = trim($this->shellAdapter->runShellCommand($command));
+            if (!$tables) {
+                return [];
+            }
+
+            $allTables = explode("\n", $tables);
             $ignoredTables = [];
             foreach ($options[self::OPTION_IGNORE_TABLES] as $pattern) {
                 $ignoredTables += array_filter($allTables, function ($table) use ($pattern) {
