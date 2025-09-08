@@ -73,8 +73,9 @@ class ExportPlugin
         # Temporarily switching into the working directory while running this command.
         # @link https://unix.stackexchange.com/questions/349894/can-i-tell-find-to-to-not-restore-initial-working-directory
 
-        $dumpStructureCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
-            . escapeshellarg($database) . ' -v 3 --no-data --triggers --events --routines --lock-all-tables '
+        $dumpStructureCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir --clear '
+            . escapeshellarg($database) . ' -v 3 --no-data --triggers --events --routines '
+            . '--sync-thread-lock-mode=LOCK_ALL --tables-list '
             . $this->getMysqldumperCommandConnectionArguments() . ' ';
 
         if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
@@ -84,8 +85,9 @@ class ExportPlugin
                 . ' -exec sed -ri \'s|DEFINER=[^ ]+ |DEFINER=CURRENT_USER |g\' {} \;';
         }
 
-        $dumpDataCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
-            . escapeshellarg($database) . ' -v 3 --no-schemas --lock-all-tables '
+        $dumpDataCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir --merge '
+            . escapeshellarg($database) . ' -v 3 --no-schemas --sync-thread-lock-mode=LOCK_ALL '
+            . '--sync-thread-lock-mode=LOCK_ALL --tables-list '
             . $this->getMysqldumperCommandConnectionArguments() . ' ';
 
         $dataTables = $this->getDataTables($database, $options);
