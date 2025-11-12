@@ -74,7 +74,8 @@ class ExportPlugin
         # @link https://unix.stackexchange.com/questions/349894/can-i-tell-find-to-to-not-restore-initial-working-directory
 
         $dumpStructureCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
-            . escapeshellarg($database) . ' -v 3 --no-data --triggers --events --routines --lock-all-tables '
+            . escapeshellarg($database) . ' --clear -v 3 --no-data --triggers --events --routines '
+            . '--sync-thread-lock-mode=LOCK_ALL '
             . $this->getMysqldumperCommandConnectionArguments() . ' ';
 
         if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
@@ -85,7 +86,8 @@ class ExportPlugin
         }
 
         $dumpDataCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
-            . escapeshellarg($database) . ' -v 3 --no-schemas --lock-all-tables '
+            . escapeshellarg($database) . ' --merge -v 3 --no-schemas '
+            . '--sync-thread-lock-mode=LOCK_ALL '
             . $this->getMysqldumperCommandConnectionArguments() . ' ';
 
         $dataTables = $this->getDataTables($database, $options);
@@ -122,7 +124,12 @@ class ExportPlugin
         if (!empty($options[self::OPTION_IGNORE_TABLES])) {
             $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
                 . $this->getMysqlCommandConnectionArguments() . ' ';
-            $allTables = explode("\n", trim($this->shellAdapter->runShellCommand($command)));
+            $tables = trim($this->shellAdapter->runShellCommand($command));
+            if (!$tables) {
+                return [];
+            }
+
+            $allTables = explode("\n", $tables);
             $ignoredTables = [];
             foreach ($options[self::OPTION_IGNORE_TABLES] as $pattern) {
                 $ignoredTables += array_filter($allTables, function ($table) use ($pattern) {
@@ -130,6 +137,12 @@ class ExportPlugin
                 });
             }
             $dataTables = array_diff($allTables, $ignoredTables);
+
+            $mappedTables = [];
+            foreach ($dataTables as $table) {
+                $mappedTables[] = $database . '.' . $table;
+            }
+            $dataTables = $mappedTables;
         }
 
         return $dataTables;
