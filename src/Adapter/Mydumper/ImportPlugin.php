@@ -108,7 +108,48 @@ class ImportPlugin
             throw new Exception\RuntimeException("File \"$filename\" is not a valid mydumper export.");
         }
 
-        return "$path/{$files[0]}";
+        $extractedPath = "$path/{$files[0]}";
+
+        // Fix metadata file if it was created by an old version of mydumper
+        $this->fixMetadataFile($extractedPath);
+
+        return $extractedPath;
+    }
+
+    /**
+     * Fix metadata file from old mydumper versions that don't include the [config] group header
+     */
+    private function fixMetadataFile(string $extractedPath): void
+    {
+        $metadataFile = $extractedPath . '/metadata';
+
+        if (!file_exists($metadataFile)) {
+            $this->logger->warning("Metadata file not found at $metadataFile");
+            return;
+        }
+
+        $content = file_get_contents($metadataFile);
+        if ($content === false) {
+            $this->logger->warning("Failed to read metadata file at $metadataFile");
+            return;
+        }
+
+        // Check if the file already starts with a group header
+        $trimmedContent = ltrim($content);
+        if (preg_match('/^\[.*?\]/', $trimmedContent)) {
+            // File already has a group header, no fix needed
+            return;
+        }
+
+        // Add [config] group header at the top
+        $fixedContent = "[config]\n" . $content;
+
+        if (file_put_contents($metadataFile, $fixedContent) === false) {
+            $this->logger->warning("Failed to fix metadata file at $metadataFile");
+            return;
+        }
+
+        $this->logger->info("Fixed metadata file from old mydumper version by adding [config] header");
     }
 
     public function assertIsUsable(): void
