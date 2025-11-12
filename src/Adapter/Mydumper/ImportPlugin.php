@@ -117,7 +117,8 @@ class ImportPlugin
     }
 
     /**
-     * Fix metadata file from old mydumper versions that don't include the [config] group header
+     * Fix metadata file from old mydumper versions that don't include the [snapshot] group header
+     * and use old text format instead of key=value format
      */
     private function fixMetadataFile(string $extractedPath): void
     {
@@ -141,15 +142,66 @@ class ImportPlugin
             return;
         }
 
-        // Add [config] group header at the top
-        $fixedContent = "[config]\n" . $content;
+        // Old mydumper format has lines like:
+        // "Started dump at: 2025-11-12 09:00:08"
+        // "Finished dump at: 2025-11-12 09:00:08"
+        // New format needs:
+        // [snapshot]
+        // started=2025-11-12 09:00:08
+        // finished=2025-11-12 09:00:08
+
+        $lines = explode("\n", $content);
+        $fixedLines = ['[snapshot]'];
+        $converted = false;
+
+        foreach ($lines as $line) {
+            $trimmedLine = trim($line);
+
+            // Skip empty lines
+            if ($trimmedLine === '') {
+                continue;
+            }
+
+            // Convert "Started dump at: TIMESTAMP" to "started=TIMESTAMP"
+            if (preg_match('/^Started dump at:\s*(.+)$/i', $trimmedLine, $matches)) {
+                $fixedLines[] = 'started=' . trim($matches[1]);
+                $converted = true;
+                continue;
+            }
+
+            // Convert "Finished dump at: TIMESTAMP" to "finished=TIMESTAMP"
+            if (preg_match('/^Finished dump at:\s*(.+)$/i', $trimmedLine, $matches)) {
+                $fixedLines[] = 'finished=' . trim($matches[1]);
+                $converted = true;
+                continue;
+            }
+
+            // If it's already a key=value line, keep it as-is
+            if (strpos($trimmedLine, '=') !== false) {
+                $fixedLines[] = $line;
+                $converted = true;
+                continue;
+            }
+
+            // Skip any other descriptive text or comments
+            if (strpos($trimmedLine, '#') === 0) {
+                $fixedLines[] = $line;
+            }
+        }
+
+        if (!$converted) {
+            // No valid data found, just add the header
+            $this->logger->warning("No valid metadata found in file, adding minimal [snapshot] header");
+        }
+
+        $fixedContent = implode("\n", $fixedLines) . "\n";
 
         if (file_put_contents($metadataFile, $fixedContent) === false) {
             $this->logger->warning("Failed to fix metadata file at $metadataFile");
             return;
         }
 
-        $this->logger->info("Fixed metadata file from old mydumper version by adding [config] header");
+        $this->logger->info("Fixed metadata file from old mydumper version by converting to [snapshot] format");
     }
 
     public function assertIsUsable(): void
