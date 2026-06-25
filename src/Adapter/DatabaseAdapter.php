@@ -39,7 +39,7 @@ class DatabaseAdapter implements DatabaseAdapterInterface
         }
     }
 
-    private function runQuery(string $query, array $data = null): PDOStatement
+    private function runQuery(string $query, ?array $data = null): PDOStatement
     {
         $this->connect();
         $statement = $this->databaseConnection->prepare($query);

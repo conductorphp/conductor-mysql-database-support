@@ -1,51 +1,52 @@
 {
-    "name": "conductor/mysql-database-support",
-    "description": "Conductor MySQL Database Support",
-    "type": "library",
-    "homepage": "https://github.com/conductorphp/mysql-database-support",
-    "license": "Apache-2.0",
-    "authors": [
-        {
-            "name": "Kirk Madera",
-            "email": "kirk.madera@rmgmedia.com",
-            "role": "Architect"
-        }
-    ],
-    "config": {
-        "sort-packages": true
-    },
-    "require": {
-        "php": "~8.1.0|~8.2.0",
-        "ext-pdo_mysql": "*",
-        "conductor/core": "^2.0"
-    },
-    "require-dev": {
-        "laminas/laminas-coding-standard": "^2.5.0",
-        "phpunit/phpunit": "^10.0.16"
-    },
-    "autoload": {
-        "psr-4": {
-            "ConductorMySqlSupport\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "ConductorMySqlSupportTest\\": "test/"
-        }
-    },
-    "extra": {
-        "laminas": {
-            "config-provider": "ConductorMySqlSupport\\ConfigProvider"
-        }
-    },
-    "scripts": {
-        "check": [
-            "@cs-check",
-            "@test"
-        ],
-        "cs-check": "phpcs",
-        "cs-fix": "phpcbf",
-        "test": "phpunit --colors=always",
-        "test-coverage": "phpunit --colors=always --coverage-clover clover.xml"
+  "name": "conductor/mysql-database-support",
+  "version": "3.0.1",
+  "description": "Conductor MySQL Database Support",
+  "type": "library",
+  "homepage": "https://github.com/conductorphp/mysql-database-support",
+  "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "Kirk Madera",
+      "email": "kirk.madera@rmgmedia.com",
+      "role": "Architect"
     }
+  ],
+  "config": {
+    "sort-packages": true
+  },
+  "require": {
+    "php": "~8.2.0|~8.3.0|~8.4.0|~8.5.0",
+    "ext-pdo_mysql": "*",
+    "conductor/core": "^2.0"
+  },
+  "require-dev": {
+    "laminas/laminas-coding-standard": "^2.5.0",
+    "phpunit/phpunit": "^10.0.16"
+  },
+  "autoload": {
+    "psr-4": {
+      "ConductorMySqlSupport\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "ConductorMySqlSupportTest\\": "test/"
+    }
+  },
+  "extra": {
+    "laminas": {
+      "config-provider": "ConductorMySqlSupport\\ConfigProvider"
+    }
+  },
+  "scripts": {
+    "check": [
+      "@cs-check",
+      "@test"
+    ],
+    "cs-check": "phpcs",
+    "cs-fix": "phpcbf",
+    "test": "phpunit --colors=always",
+    "test-coverage": "phpunit --colors=always --coverage-clover clover.xml"
+  }
 }

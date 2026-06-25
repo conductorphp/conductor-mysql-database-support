@@ -1,3 +1,10 @@
+[3.0.1](https://github.com/conductorphp/conductor-mysql-database-support/compare/3.0.0...3.0.1) (2026-06-25)
+
+### Bug Fixes
+* 8.2-8.5 support ([e5047ae](https://github.com/conductorphp/conductor-mysql-database-support/commit/e5047ae686f5b2fd044acb554c2003dc4112a6a7))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.

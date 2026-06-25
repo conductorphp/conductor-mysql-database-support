@@ -21,9 +21,9 @@ class MysqldumpImportExportAdapter implements DatabaseImportExportAdapterInterfa
         string                $password,
         string                $host = 'localhost',
         int                   $port = 3306,
-        ShellAdapterInterface $shellAdapter = null,
-        ImportPlugin          $importPlugin = null,
-        ExportPlugin          $exportPlugin = null,
+        ?ShellAdapterInterface $shellAdapter = null,
+        ?ImportPlugin          $importPlugin = null,
+        ?ExportPlugin          $exportPlugin = null,
         ?LoggerInterface      $logger = null
     ) {
         if (is_null($logger)) {
