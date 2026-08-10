@@ -1,3 +1,10 @@
+[4.1.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/4.0.0...4.1.0) (2026-08-10)
+
+### Features
+* PHP 8.4.1+ (CTAP-1224) ([b3cb154](https://github.com/conductorphp/conductor-mysql-database-support/commit/b3cb154ea354251c47e595712d94b25801959b2d))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [3.0.1](https://github.com/conductorphp/conductor-mysql-database-support/compare/3.0.0...3.0.1) (2026-06-25)
 
 ### Bug Fixes
