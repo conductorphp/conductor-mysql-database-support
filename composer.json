@@ -1,6 +1,6 @@
 {
   "name": "conductor/mysql-database-support",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "Conductor MySQL Database Support",
   "type": "library",
   "homepage": "https://github.com/conductorphp/mysql-database-support",
@@ -22,7 +22,7 @@
   },
   "require-dev": {
     "laminas/laminas-coding-standard": "^2.5.0",
-    "phpunit/phpunit": "^10.0.16"
+    "phpunit/phpunit": "^13.0"
   },
   "autoload": {
     "psr-4": {

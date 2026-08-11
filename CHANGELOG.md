@@ -1,3 +1,10 @@
+[4.1.1](https://github.com/conductorphp/conductor-mysql-database-support/compare/4.1.0...4.1.1) (2026-08-11)
+
+### Bug Fixes
+* to phpunit 13 (CTAP-1226) ([3d233eb](https://github.com/conductorphp/conductor-mysql-database-support/commit/3d233eb3617708ecd1a79cdf0a89e4c5521b327f))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.1.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/4.0.0...4.1.0) (2026-08-10)
 
 ### Features
