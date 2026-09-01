@@ -55,22 +55,94 @@ class ExportPlugin
         $this->validateOptions($options);
 
         $command = $this->getMyDumperExportCommand($database, $options);
+        $archive = "$workingDir/$database.tgz";
 
         try {
-            $this->shellAdapter->runShellCommand($command, null, null, ShellAdapterInterface::PRIORITY_LOW);
-            $this->shellAdapter->runShellCommand('pwd && rm -rf ' . escapeshellarg($database), $workingDir);
-
+            // Every path in the command is relative, so the working directory has to be the command's
+            // own. Left to the process's cwd, the dump and the archive land wherever conductor was
+            // started from while the returned path claims they are under $path.
+            $this->shellAdapter->runShellCommand($command, $workingDir, null, ShellAdapterInterface::PRIORITY_LOW);
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
 
-        return "$path/$database.tgz";
+        $this->assertArchiveIsRestorable($archive, $workingDir);
+
+        $filename = "$path/$database.tgz";
+        if (!rename($archive, $filename)) {
+            throw new Exception\RuntimeException(
+                sprintf('Failed to move the export archive from "%s" to "%s".', $archive, $filename)
+            );
+        }
+
+        // Only on success. A failed export's working directory is the only evidence of what mydumper
+        // did or did not write.
+        $this->shellAdapter->runShellCommand('rm -rf ' . escapeshellarg($workingDir));
+
+        return $filename;
+    }
+
+    /**
+     * mydumper exiting 0 is not proof that it wrote anything: the shell adapter only sees the exit
+     * status, so a command that produced nothing reads as a successful export. The caller is then
+     * handed a path to a file that may not exist, and the snapshot is discovered to be bad at restore
+     * time — months later, by someone who needed it.
+     *
+     * @throws Exception\RuntimeException If the archive is missing, empty, or not a mydumper dump
+     */
+    private function assertArchiveIsRestorable(string $archive, string $workingDir): void
+    {
+        clearstatcache(true, $archive);
+
+        if (!is_file($archive)) {
+            throw new Exception\RuntimeException(
+                sprintf('mydumper reported success but wrote no archive at "%s".', $archive)
+                . $this->describeLeftoverWorkingDir($workingDir)
+            );
+        }
+
+        if (!filesize($archive)) {
+            throw new Exception\RuntimeException(
+                sprintf('mydumper reported success but wrote an empty archive at "%s".', $archive)
+                . $this->describeLeftoverWorkingDir($workingDir)
+            );
+        }
+
+        // Listing the archive reads all of it, which is the point: it is the only thing that proves the
+        // gzip stream runs to the end. An export truncated by a full disk tars and exits 0, and would
+        // otherwise be found out years later by whoever needed the snapshot.
+        try {
+            $contents = $this->shellAdapter->runShellCommand('tar -tzf ' . escapeshellarg($archive));
+        } catch (\Exception $e) {
+            throw new Exception\RuntimeException(
+                sprintf('The export archive "%s" could not be read back: %s', $archive, $e->getMessage())
+                . $this->describeLeftoverWorkingDir($workingDir)
+            );
+        }
+
+        // myloader refuses a directory with no metadata file, so an archive without one is not a
+        // restorable snapshot however well formed the tar is.
+        if (!preg_match('~(^|/)metadata$~m', $contents)) {
+            throw new Exception\RuntimeException(
+                sprintf(
+                    'The export archive "%s" contains no metadata file, so myloader cannot restore it.',
+                    $archive
+                )
+                . $this->describeLeftoverWorkingDir($workingDir)
+            );
+        }
+    }
+
+    private function describeLeftoverWorkingDir(string $workingDir): string
+    {
+        return " The working directory \"$workingDir\" was left in place so the failure can be diagnosed.";
     }
 
     private function getMyDumperExportCommand(string $database, array $options): string
     {
-        # find command has a bug where it will fail if you do not have read permissions to the current working directory
-        # Temporarily switching into the working directory while running this command.
+        # Every path below is relative to the working directory this command is run in, which is the
+        # directory the export owns. That also keeps find off the caller's cwd, which it cannot always
+        # read and fails on when it cannot.
         # @link https://unix.stackexchange.com/questions/349894/can-i-tell-find-to-to-not-restore-initial-working-directory
 
         $dumpStructureCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
@@ -203,6 +275,8 @@ class ExportPlugin
             $requiredFunctions = [
                 'mysql',
                 'mydumper',
+                // The export tars its own output and reads the archive back to check it.
+                'tar',
             ];
             $missingFunctions = [];
             foreach ($requiredFunctions as $requiredFunction) {

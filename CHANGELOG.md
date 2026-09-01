@@ -1,3 +1,10 @@
+[5.1.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/5.0.0...5.1.0) (2026-09-01)
+
+### Features
+* a restore that cannot succeed, and verify what an export wrote (CTAP-1573) ([58ceabe](https://github.com/conductorphp/conductor-mysql-database-support/commit/58ceabe81d120c38902d76cdab61ba5f12e22c51))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [5.0.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/4.2.0...5.0.0) (2026-09-01)
 
 

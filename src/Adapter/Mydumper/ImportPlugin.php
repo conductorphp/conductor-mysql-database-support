@@ -34,6 +34,7 @@ class ImportPlugin
     private ShellAdapterInterface $shellAdapter;
     private LoggerInterface $logger;
     private SqlModeSanitizer $sqlModeSanitizer;
+    private RestorePreflight $restorePreflight;
 
 
     public function __construct(
@@ -43,7 +44,8 @@ class ImportPlugin
         string                $host = 'localhost',
         int                   $port = 3306,
         ?LoggerInterface      $logger = null,
-        ?SqlModeSanitizer     $sqlModeSanitizer = null
+        ?SqlModeSanitizer     $sqlModeSanitizer = null,
+        ?RestorePreflight     $restorePreflight = null
     ) {
         $this->username = $username;
         $this->password = $password;
@@ -61,6 +63,13 @@ class ImportPlugin
             );
         }
         $this->sqlModeSanitizer = $sqlModeSanitizer;
+        if (is_null($restorePreflight)) {
+            $restorePreflight = new RestorePreflight(
+                new TargetSchemaSupport($username, $password, $host, $port, $logger),
+                $logger
+            );
+        }
+        $this->restorePreflight = $restorePreflight;
     }
 
     public function importFromFile(
@@ -78,13 +87,32 @@ class ImportPlugin
         $command = $this->getMyDumperImportCommand($database, $extractedPath, $errorLog);
 
         try {
+            $this->restorePreflight->check($extractedPath, $database);
             $this->shellAdapter->runShellCommand($command, null, null, ShellAdapterInterface::PRIORITY_LOW);
-            $this->shellAdapter->runShellCommand(
-                'rm -rf ' . escapeshellarg($extractedPath) . ' ' . escapeshellarg($errorLog)
-            );
         } catch (\Exception $e) {
+            $this->logger->error($this->describeLeftoverEvidence($extractedPath, $errorLog));
             throw new Exception\RuntimeException($this->describeImportFailure($e, $errorLog), 0, $e);
         }
+
+        // Only on success. A failed restore's dump and log are the only evidence of what went wrong.
+        $this->shellAdapter->runShellCommand(
+            'rm -rf ' . escapeshellarg($extractedPath) . ' ' . escapeshellarg($errorLog)
+        );
+    }
+
+    /**
+     * A failed restore is the one time the extracted dump is worth keeping, so say where it is rather
+     * than leaving it as an unexplained directory. The error log only exists if myloader itself ran —
+     * a restore refused before that point never created one.
+     */
+    private function describeLeftoverEvidence(string $extractedPath, string $errorLog): string
+    {
+        $message = "The extracted dump was left at \"$extractedPath\"";
+        if (is_file($errorLog)) {
+            $message .= " and myloader's output at \"$errorLog\"";
+        }
+
+        return $message . ' so the failure can be diagnosed. Safe to delete.';
     }
 
     /**
@@ -336,6 +364,7 @@ class ImportPlugin
             $this->shellAdapter->setLogger($logger);
         }
         $this->sqlModeSanitizer->setLogger($logger);
+        $this->restorePreflight->setLogger($logger);
         $this->logger = $logger;
     }
 }
