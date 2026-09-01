@@ -1,3 +1,10 @@
+[4.2.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/4.1.1...4.2.0) (2026-09-01)
+
+### Features
+* sql_mode out of a mydumper dump before myloader runs (CTAP-1571) ([b0599b1](https://github.com/conductorphp/conductor-mysql-database-support/commit/b0599b1f20cb46f31657c1590f49ef2a31eb792d))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.1.1](https://github.com/conductorphp/conductor-mysql-database-support/compare/4.1.0...4.1.1) (2026-08-11)
 
 ### Bug Fixes

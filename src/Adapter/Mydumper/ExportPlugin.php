@@ -220,6 +220,12 @@ class ExportPlugin
                     )
                 );
             }
+
+            // Every flag this plugin passes still exists in 1.0, so an older mydumper would export
+            // fine. The floor is asserted here anyway: mydumper and myloader ship together, so an
+            // image that would fail this check is one whose restores are already broken. Better to
+            // say so when the snapshot is taken than when someone tries to restore it.
+            MydumperVersion::assertSupported('mydumper');
         } catch (\Exception $e) {
             throw new Exception\RuntimeException(
                 sprintf(

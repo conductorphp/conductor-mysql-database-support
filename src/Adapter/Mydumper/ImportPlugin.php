@@ -10,12 +10,30 @@ use Psr\Log\NullLogger;
 
 class ImportPlugin
 {
+    /**
+     * Appended to the extracted dump directory's path — a sibling, not a file inside it, so myloader
+     * never sees it.
+     */
+    private const ERROR_LOG_SUFFIX = '.myloader.log';
+
+    private const MAX_REPORTED_ERRORS = 10;
+
+    /**
+     * Matches myloader's own fatal lines and their timestamp prefix, e.g.
+     * "** (myloader:26): CRITICAL **: 21:40:12.916: Thread 5 ... - ERROR 1101: ...".
+     *
+     * The level has to be exactly CRITICAL so that glib's own "GLib-CRITICAL" chatter, which myloader
+     * emits on a healthy run too, does not get reported as the reason for the failure.
+     */
+    private const MYLOADER_CRITICAL_PATTERN = '/^\*\* \([^)]+\): CRITICAL \*\*: [0-9:.]+: /';
+
     private string $username;
     private string $password;
     private string $host;
     private int $port;
     private ShellAdapterInterface $shellAdapter;
     private LoggerInterface $logger;
+    private SqlModeSanitizer $sqlModeSanitizer;
 
 
     public function __construct(
@@ -24,7 +42,8 @@ class ImportPlugin
         string                $password,
         string                $host = 'localhost',
         int                   $port = 3306,
-        ?LoggerInterface      $logger = null
+        ?LoggerInterface      $logger = null,
+        ?SqlModeSanitizer     $sqlModeSanitizer = null
     ) {
         $this->username = $username;
         $this->password = $password;
@@ -35,6 +54,13 @@ class ImportPlugin
             $logger = new NullLogger();
         }
         $this->logger = $logger;
+        if (is_null($sqlModeSanitizer)) {
+            $sqlModeSanitizer = new SqlModeSanitizer(
+                new TargetSqlModeSupport($username, $password, $host, $port, $logger),
+                $logger
+            );
+        }
+        $this->sqlModeSanitizer = $sqlModeSanitizer;
     }
 
     public function importFromFile(
@@ -46,14 +72,64 @@ class ImportPlugin
         $this->assertIsUsable();
         $this->validateOptions($options);
         $extractedPath = $this->extractAndValidateImportFile($filename);
-        $command = $this->getMyDumperImportCommand($database, $extractedPath);
+        $this->sqlModeSanitizer->sanitize($extractedPath);
+
+        $errorLog = $extractedPath . self::ERROR_LOG_SUFFIX;
+        $command = $this->getMyDumperImportCommand($database, $extractedPath, $errorLog);
 
         try {
             $this->shellAdapter->runShellCommand($command, null, null, ShellAdapterInterface::PRIORITY_LOW);
-            $this->shellAdapter->runShellCommand('rm -rf ' . escapeshellarg($extractedPath));
+            $this->shellAdapter->runShellCommand(
+                'rm -rf ' . escapeshellarg($extractedPath) . ' ' . escapeshellarg($errorLog)
+            );
         } catch (\Exception $e) {
-            throw new Exception\RuntimeException($e->getMessage());
+            throw new Exception\RuntimeException($this->describeImportFailure($e, $errorLog), 0, $e);
         }
+    }
+
+    /**
+     * myloader aborts the process on a failed statement — with a core dump, which is all the shell
+     * adapter's exception can report. The reason is on myloader's stderr, so pull it back out and put
+     * it in the message. A schema the target rejects (a JSON column with a DEFAULT, an over-long
+     * index) has to name itself, or the failure looks like a crash rather than an incompatible dump.
+     */
+    private function describeImportFailure(\Exception $exception, string $errorLog): string
+    {
+        $reasons = $this->getMyLoaderErrors($errorLog);
+        if (!$reasons) {
+            return $exception->getMessage();
+        }
+
+        return "myloader failed to restore the dump:\n  " . implode("\n  ", $reasons)
+            . "\n" . $exception->getMessage();
+    }
+
+    /**
+     * @return string[] Distinct fatal errors reported by myloader, in the order it hit them
+     */
+    private function getMyLoaderErrors(string $errorLog): array
+    {
+        if (!is_readable($errorLog)) {
+            return [];
+        }
+
+        $log = file($errorLog, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (false === $log) {
+            return [];
+        }
+
+        $reasons = [];
+        foreach ($log as $line) {
+            if (!preg_match(self::MYLOADER_CRITICAL_PATTERN, $line)) {
+                continue;
+            }
+            $reason = trim(preg_replace(self::MYLOADER_CRITICAL_PATTERN, '', $line));
+            if ('' !== $reason) {
+                $reasons[$reason] = $reason;
+            }
+        }
+
+        return array_slice(array_values($reasons), 0, self::MAX_REPORTED_ERRORS);
     }
 
     /**
@@ -67,11 +143,19 @@ class ImportPlugin
     }
 
 
-    private function getMyDumperImportCommand(string $database, string $importDir): string
+    private function getMyDumperImportCommand(string $database, string $importDir, string $errorLog): string
     {
+        // --drop-table=DROP is mydumper 1.0's spelling of what 0.x called --overwrite-tables. Passing
+        // the mode explicitly rather than relying on the bare flag's default keeps it readable, and
+        // avoids the option's optional argument swallowing whatever token follows it.
+        //
+        // tee keeps myloader's progress streaming to the shell adapter while also capturing it. The
+        // adapter reads stderr to EOF, which only happens once tee has exited, so the log file is
+        // complete by the time the command returns.
         return 'myloader --database ' . escapeshellarg($database) . ' --directory '
-            . escapeshellarg($importDir) . ' -v 3 --overwrite-tables '
-            . $this->getMysqlCommandConnectionArguments();
+            . escapeshellarg($importDir) . ' -v 3 --drop-table=DROP '
+            . $this->getMysqlCommandConnectionArguments()
+            . ' 2> >(tee ' . escapeshellarg($errorLog) . ' >&2)';
     }
 
     private function getMysqlCommandConnectionArguments(): string
@@ -135,10 +219,12 @@ class ImportPlugin
             return;
         }
 
-        // Check if the file already starts with a group header
-        $trimmedContent = ltrim($content);
-        if (preg_match('/^\[.*?\]/', $trimmedContent)) {
-            // File already has a group header, no fix needed
+        // A group header anywhere means this is already the key=value format. It is not necessarily the
+        // FIRST line: mydumper 0.19 opens the file with a "# Started dump at: ..." comment and only then
+        // writes [config], [myloader_session_variables] and a group per table. Testing only the first
+        // line sent those dumps through the conversion below, which drops every line that is neither a
+        // comment nor a key=value pair — including all of those group headers.
+        if (preg_match('/^\s*\[.+\]\s*$/m', $content)) {
             return;
         }
 
@@ -231,6 +317,8 @@ class ImportPlugin
                     )
                 );
             }
+
+            MydumperVersion::assertSupported('myloader');
         } catch (\Exception $e) {
             throw new Exception\RuntimeException(
                 sprintf(
@@ -247,6 +335,7 @@ class ImportPlugin
         if ($this->shellAdapter instanceof LoggerAwareInterface) {
             $this->shellAdapter->setLogger($logger);
         }
+        $this->sqlModeSanitizer->setLogger($logger);
         $this->logger = $logger;
     }
 }
