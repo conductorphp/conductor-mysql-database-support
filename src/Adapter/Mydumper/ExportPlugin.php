@@ -150,7 +150,25 @@ class ExportPlugin
             . '--sync-thread-lock-mode=LOCK_ALL '
             . $this->getMysqldumperCommandConnectionArguments() . ' ';
 
-        if (empty($options[self::OPTION_REMOVE_DEFINERS])) {
+        // 🚨 Read the option truthfully. This was `empty($options[...])`, which inverted it: the
+        // rewrite ran only when the option was FALSY, so `remove_definers => true` DISABLED removal.
+        // Not academic — ConductorCore\Console\Database\DatabaseExportCommand passes
+        // `'remove_definers' => !$input->getOption('no-remove-definers')`, so with the flag absent it
+        // sends `true`, and `empty(true)` is false. `conductor database:export` therefore stripped no
+        // definers by default on ANY adapter, and `--no-remove-definers` was the only way to get
+        // stripping. (CTAP-1607)
+        //
+        // Absent defaults to TRUE so a direct API caller that omits the option keeps the
+        // strip-by-default behavior it has today; only an explicit false now keeps definers.
+        //
+        // ⚠️ Not `!empty(...)`. For any value that is PRESENT the two are identical — both reduce
+        // to a truthy check — so the only thing that differs is the ABSENT case, and `!empty()`
+        // reads absent as "keep". That would silently flip the direct API callers who omit the
+        // option and have always had definers stripped, turning a polarity fix into a regression
+        // for the one caller class the bug never touched. `?? true` states the default where it is
+        // read, and it can tell "absent" from "explicitly false" — which `empty()` structurally
+        // cannot, and which is how the original inversion hid for so long.
+        if ($options[self::OPTION_REMOVE_DEFINERS] ?? true) {
             // Replace definer in triggers and views with CURRENT_USER
             $dumpStructureCommand .= '&& find ' . escapeshellarg($database)
                 . ' \( -name "*-schema-view.sql" -o -name "*-schema-triggers.sql" \)'

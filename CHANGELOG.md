@@ -1,3 +1,10 @@
+[5.1.1](https://github.com/conductorphp/conductor-mysql-database-support/compare/5.1.0...5.1.1) (2026-09-04)
+
+### Bug Fixes
+* definers for real, and stop inverting the option (CTAP-1607) ([d00be9f](https://github.com/conductorphp/conductor-mysql-database-support/commit/d00be9ff71e1733d5507df3c00b33be6fdb88ccf))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [5.1.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/5.0.0...5.1.0) (2026-09-01)
 
 ### Features
