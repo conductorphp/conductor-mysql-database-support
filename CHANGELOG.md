@@ -1,3 +1,8 @@
+[6.0.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/5.1.2...6.0.0) (2026-09-08)
+
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [5.1.2](https://github.com/conductorphp/conductor-mysql-database-support/compare/5.1.1...5.1.2) (2026-09-08)
 
 ### Bug Fixes

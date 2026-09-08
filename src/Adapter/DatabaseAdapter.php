@@ -5,6 +5,7 @@ namespace ConductorMySqlSupport\Adapter;
 use ConductorCore\Database\DatabaseAdapterInterface;
 use ConductorMySqlSupport\Exception;
 use PDO;
+use PDOException;
 use PDOStatement;
 
 class DatabaseAdapter implements DatabaseAdapterInterface
@@ -135,6 +136,36 @@ class DatabaseAdapter implements DatabaseAdapterInterface
     public function createDatabase(string $database): void
     {
         $this->runQuery("CREATE DATABASE " . $this->quoteIdentifier($database));
+    }
+
+    /**
+     * @param array<string, mixed>|null $parameters
+     * @return list<array<string, mixed>>
+     * @throws Exception\RuntimeException If the query cannot be run.
+     */
+    public function fetchAll(string $sql, string $database, ?array $parameters = null): array
+    {
+        // PDOException is caught and rethrown so a caller programming against
+        // DatabaseAdapterInterface never has to catch a driver-specific exception to handle a
+        // failed read. dropDatabaseIfExists() sets the same precedent.
+        try {
+            $this->runQuery("USE " . $this->quoteIdentifier($database));
+
+            return $this->runQuery($sql, $parameters)->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $exception) {
+            throw new Exception\RuntimeException(
+                "Error running query against database \"$database\": {$exception->getMessage()}",
+                (int)$exception->getCode(),
+                $exception
+            );
+        }
+    }
+
+    public function quote(string $value): string
+    {
+        $this->connect();
+
+        return $this->databaseConnection->quote($value);
     }
 
     /**
