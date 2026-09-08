@@ -89,16 +89,22 @@ class DatabaseAdapter implements DatabaseAdapterInterface
 
     public function getTableMetadata(string $database): array
     {
+        // Every column is aliased because an unaliased one comes back under its REAL name, not the
+        // case it was typed in, and information_schema.TABLES declares these columns uppercase.
+        // Selecting `table_rows` and reading $row['table_rows'] therefore worked on MariaDB but not
+        // on MySQL 8, which returns TABLE_ROWS: an "Undefined array key" warning per table, and a
+        // null row count that database:table-metadata rendered as 0 for every table. Aliasing keeps
+        // the read independent of server-side casing.
         $sql
-            = "SELECT TABLE_NAME, table_rows, (data_length + index_length) 'size'
+            = "SELECT TABLE_NAME AS 'name', TABLE_ROWS AS 'rows', (data_length + index_length) 'size'
                 FROM information_schema.TABLES
                 WHERE table_schema = :database and TABLE_TYPE='BASE TABLE'
                 ORDER BY TABLE_NAME ASC;";
         $statement = $this->runQuery($sql, [':database' => $database]);
         $tableSizes = [];
         foreach ($statement->fetchAll() as $row) {
-            $tableSizes[$row['TABLE_NAME']] = [
-                'rows' => $row['table_rows'],
+            $tableSizes[$row['name']] = [
+                'rows' => $row['rows'],
                 'size' => $row['size'],
             ];
         }

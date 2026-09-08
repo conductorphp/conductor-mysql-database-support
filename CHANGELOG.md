@@ -1,3 +1,10 @@
+[5.1.2](https://github.com/conductorphp/conductor-mysql-database-support/compare/5.1.1...5.1.2) (2026-09-08)
+
+### Bug Fixes
+* getTableMetadata columns so MySQL 8 row counts are read (CTAP-1628) ([6757273](https://github.com/conductorphp/conductor-mysql-database-support/commit/67572735e07f0d28986a3fb9557a69909fcd28d3))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [5.1.1](https://github.com/conductorphp/conductor-mysql-database-support/compare/5.1.0...5.1.1) (2026-09-04)
 
 ### Bug Fixes
