@@ -1,3 +1,10 @@
+[6.1.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.0.0...6.1.0) (2026-09-14)
+
+### Features
+* conductor/core ^5.0 (CTAP-1712) ([c93ecf0](https://github.com/conductorphp/conductor-mysql-database-support/commit/c93ecf0c7e6513082464ab18b0711ffd9e45f312))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [6.0.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/5.1.2...6.0.0) (2026-09-08)
 
 
