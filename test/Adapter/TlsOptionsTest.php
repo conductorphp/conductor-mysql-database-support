@@ -15,8 +15,10 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use ReflectionMethod;
 
+use function escapeshellarg;
 use function file_get_contents;
 use function fileperms;
+use function openssl_get_cert_locations;
 use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
@@ -167,6 +169,23 @@ final class TlsOptionsTest extends TestCase
             TlsOptions::fromOptions(['tls' => '1', 'tls_ca' => '/etc/ssl/rds.pem'])->mydumperArguments(),
         );
         self::assertSame(' --ssl --ssl-mode=REQUIRED', TlsOptions::fromOptions(['tls' => '1', 'tls_verify' => '0'])->mydumperArguments());
+    }
+
+    /**
+     * CTAP-2130. mysql and mydumper refuse VERIFY_IDENTITY without a CA ("SSL required option
+     * missing: ca"), so an empty tls_ca gives them the system bundle, as PDO already gets.
+     */
+    #[Test]
+    public function verifiedCommandLineFlagsWithoutACaUseTheSystemBundle(): void
+    {
+        $bundle = escapeshellarg(openssl_get_cert_locations()['default_cert_file']);
+        $tls    = TlsOptions::fromOptions(['tls' => '1', 'tls_ca' => '']);
+
+        self::assertSame(
+            " --loose-ssl --loose-ssl-mode=VERIFY_IDENTITY --loose-ssl-verify-server-cert --ssl-ca=$bundle",
+            $tls->mysqlClientArguments(),
+        );
+        self::assertSame(" --ssl --ssl-mode=VERIFY_IDENTITY --ca=$bundle", $tls->mydumperArguments());
     }
 
     #[Test]

@@ -140,7 +140,7 @@ final readonly class TlsOptions
         $flags = $this->verify
             ? ['--loose-ssl', '--loose-ssl-mode=VERIFY_IDENTITY', '--loose-ssl-verify-server-cert']
             : ['--loose-ssl', '--loose-ssl-mode=REQUIRED', '--loose-disable-ssl-verify-server-cert'];
-        foreach (['--ssl-ca' => $this->ca, '--ssl-cert' => $this->cert, '--ssl-key' => $this->key] as $flag => $path) {
+        foreach (['--ssl-ca' => $this->verifyingCa(), '--ssl-cert' => $this->cert, '--ssl-key' => $this->key] as $flag => $path) {
             if ($path !== null) {
                 $flags[] = $flag . '=' . escapeshellarg($path);
             }
@@ -160,7 +160,7 @@ final readonly class TlsOptions
         }
 
         $flags = ['--ssl', '--ssl-mode=' . ($this->verify ? 'VERIFY_IDENTITY' : 'REQUIRED')];
-        foreach (['--ca' => $this->ca, '--cert' => $this->cert, '--key' => $this->key] as $flag => $path) {
+        foreach (['--ca' => $this->verifyingCa(), '--cert' => $this->cert, '--key' => $this->key] as $flag => $path) {
             if ($path !== null) {
                 $flags[] = $flag . '=' . escapeshellarg($path);
             }
@@ -184,6 +184,21 @@ final readonly class TlsOptions
             'MySQL TLS is on with tls_verify=0: connections are encrypted, but the server certificate '
             . 'and host name are not checked.'
         );
+    }
+
+    /**
+     * The CA the command-line clients verify against. Unlike PDO, mysql and mydumper refuse
+     * VERIFY_IDENTITY without one ("SSL required option missing: ca"), so an empty `tls_ca` means the
+     * system bundle here too, as it does for {@see self::pdoOptions()} (CTAP-2130). Unverified TLS
+     * needs no CA and gets none.
+     */
+    private function verifyingCa(): ?string
+    {
+        if ($this->ca !== null || !$this->verify) {
+            return $this->ca;
+        }
+
+        return self::systemCaBundle();
     }
 
     private static function systemCaBundle(): string
