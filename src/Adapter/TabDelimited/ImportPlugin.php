@@ -2,6 +2,7 @@
 
 namespace ConductorMySqlSupport\Adapter\TabDelimited;
 
+use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Exception;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
@@ -19,14 +20,18 @@ class ImportPlugin
     private LoggerInterface $logger;
 
 
+    private TlsOptions $tls;
+
     public function __construct(
         ShellAdapterInterface $shellAdapter,
         string                $username,
         string                $password,
         string                $host = 'localhost',
         int                   $port = 3306,
-        ?LoggerInterface      $logger = null
+        ?LoggerInterface      $logger = null,
+        ?TlsOptions $tls = null
     ) {
+        $this->tls = $tls ?? TlsOptions::disabled();
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -126,7 +131,7 @@ class ImportPlugin
             escapeshellarg($this->port),
             escapeshellarg($this->username),
             $this->password ? '-p' . escapeshellarg($this->password) . ' ' : ''
-        );
+        ) . $this->tls->mysqlClientArguments();
     }
 
     /**

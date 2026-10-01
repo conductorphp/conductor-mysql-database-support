@@ -2,6 +2,7 @@
 
 namespace ConductorMySqlSupport\Adapter\Mydumper;
 
+use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use ConductorMySqlSupport\Exception;
@@ -23,14 +24,18 @@ class ExportPlugin
     private LoggerInterface $logger;
 
 
+    private TlsOptions $tls;
+
     public function __construct(
         ShellAdapterInterface $shellAdapter,
         string                $username,
         string                $password,
         string                $host = 'localhost',
         int                   $port = 3306,
-        ?LoggerInterface      $logger = null
+        ?LoggerInterface      $logger = null,
+        ?TlsOptions $tls = null
     ) {
+        $this->tls = $tls ?? TlsOptions::disabled();
         $this->username = $username;
         $this->password = $password;
         $this->host = $host;
@@ -205,7 +210,7 @@ class ExportPlugin
             escapeshellarg($this->port),
             escapeshellarg($this->username),
             $this->password ? '-p ' . escapeshellarg($this->password) . ' ' : ''
-        );
+        ) . $this->tls->mydumperArguments();
     }
 
     private function getDataTables(string $database, array $options): array
@@ -280,7 +285,7 @@ class ExportPlugin
             escapeshellarg($this->port),
             escapeshellarg($this->username),
             $this->password ? '-p' . escapeshellarg($this->password) . ' ' : ''
-        );
+        ) . $this->tls->mysqlClientArguments();
     }
 
     public function assertIsUsable(): void

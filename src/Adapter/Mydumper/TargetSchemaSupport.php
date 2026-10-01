@@ -2,6 +2,7 @@
 
 namespace ConductorMySqlSupport\Adapter\Mydumper;
 
+use ConductorMySqlSupport\Adapter\TlsOptions;
 use PDO;
 use PDOException;
 use Psr\Log\LoggerInterface;
@@ -31,14 +32,18 @@ class TargetSchemaSupport
     private LoggerInterface $logger;
     private ?PDO $connection;
 
+    private TlsOptions $tls;
+
     public function __construct(
         string           $username,
         string           $password,
         string           $host = 'localhost',
         int              $port = 3306,
         ?LoggerInterface $logger = null,
-        ?PDO             $connection = null
+        ?PDO             $connection = null,
+        ?TlsOptions $tls = null
     ) {
+        $this->tls = $tls ?? TlsOptions::disabled();
         $this->username = $username;
         $this->password = $password;
         $this->host = $host;
@@ -188,7 +193,7 @@ class TargetSchemaSupport
                 "mysql:host={$this->host};port={$this->port};charset=UTF8;",
                 $this->username,
                 $this->password,
-                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION] + $this->tls->pdoOptions()
             );
         }
 

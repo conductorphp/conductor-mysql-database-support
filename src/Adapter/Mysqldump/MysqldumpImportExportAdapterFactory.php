@@ -2,6 +2,8 @@
 
 namespace ConductorMySqlSupport\Adapter\Mysqldump;
 
+use Psr\Log\LoggerInterface;
+use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorMySqlSupport\Adapter\Mydumper\MydumperImportExportAdapter;
 use ConductorMySqlSupport\Exception;
 use Laminas\ServiceManager\Factory\FactoryInterface;
@@ -13,11 +15,17 @@ class MysqldumpImportExportAdapterFactory implements FactoryInterface
     {
         $this->validateOptions($options);
 
+        $tls = TlsOptions::fromOptions($options);
+        if ($container->has(LoggerInterface::class)) {
+            $tls->warnIfUnverified($container->get(LoggerInterface::class));
+        }
+
         return new MysqldumpImportExportAdapter(
             $options['username'],
             $options['password'],
             $options['host'] ?? null,
-            $options['port'] ?? null
+            $options['port'] ?? null,
+            tls: $tls
         );
     }
 
@@ -27,7 +35,7 @@ class MysqldumpImportExportAdapterFactory implements FactoryInterface
     private function validateOptions(array $options): void
     {
         $requiredOptions = ['username', 'password'];
-        $allowedOptions = ['username', 'password', 'host', 'port'];
+        $allowedOptions = ['username', 'password', 'host', 'port', ...TlsOptions::OPTION_KEYS];
 
         $missingRequiredOptions = array_diff($requiredOptions, array_keys($options));
         if ($missingRequiredOptions) {

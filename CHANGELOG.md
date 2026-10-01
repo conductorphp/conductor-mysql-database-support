@@ -1,3 +1,11 @@
+[6.3.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.2.0...6.3.0) (2026-10-01)
+
+### Features
+* certificates as PEM from the environment (CTAP-2120) ([96abb3e](https://github.com/conductorphp/conductor-mysql-database-support/commit/96abb3ee006249c38daf89323661bd2fc582ed32))
+* for every MySQL connection (CTAP-2120) ([652ecc9](https://github.com/conductorphp/conductor-mysql-database-support/commit/652ecc97211bae2c78b7fcf626ca978c1f7ed77d))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [6.2.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.1.0...6.2.0) (2026-09-16)
 
 ### Features

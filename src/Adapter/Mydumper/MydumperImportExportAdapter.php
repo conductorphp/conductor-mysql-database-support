@@ -2,6 +2,7 @@
 
 namespace ConductorMySqlSupport\Adapter\Mydumper;
 
+use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Exception;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
@@ -23,7 +24,8 @@ class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterfac
         ?ShellAdapterInterface $shellAdapter = null,
         ?ImportPlugin          $importPlugin = null,
         ?ExportPlugin          $exportPlugin = null,
-        ?LoggerInterface       $logger = null
+        ?LoggerInterface       $logger = null,
+        ?TlsOptions            $tls = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -34,11 +36,11 @@ class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterfac
         }
 
         if (is_null($importPlugin)) {
-            $importPlugin = new ImportPlugin($shellAdapter, $username, $password, $host, $port, $logger);
+            $importPlugin = new ImportPlugin($shellAdapter, $username, $password, $host, $port, $logger, null, null, $tls);
         }
         $this->importPlugin = $importPlugin;
         if (is_null($exportPlugin)) {
-            $exportPlugin = new ExportPlugin($shellAdapter, $username, $password, $host, $port, $logger);
+            $exportPlugin = new ExportPlugin($shellAdapter, $username, $password, $host, $port, $logger, $tls);
         }
         $this->exportPlugin = $exportPlugin;
     }

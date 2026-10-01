@@ -15,14 +15,17 @@ class DatabaseAdapter implements DatabaseAdapterInterface
     private string $host;
     private string $port;
     private PDO $databaseConnection;
+    private TlsOptions $tls;
 
     public function __construct(
         string $username,
         string $password,
         string $host = 'localhost',
-        int    $port = 3306
+        int    $port = 3306,
+        ?TlsOptions $tls = null
     )
     {
+        $this->tls = $tls ?? TlsOptions::disabled();
         $this->username = $username;
         $this->password = $password;
         $this->host = $host;
@@ -55,7 +58,8 @@ class DatabaseAdapter implements DatabaseAdapterInterface
             $this->databaseConnection = new PDO(
                 "mysql:host={$this->host};port={$this->port};charset=UTF8;",
                 $this->username,
-                $this->password
+                $this->password,
+                $this->tls->pdoOptions()
             );
         }
     }

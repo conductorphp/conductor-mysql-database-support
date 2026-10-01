@@ -2,6 +2,7 @@
 
 namespace ConductorMySqlSupport\Adapter\Mysqldump;
 
+use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Exception;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
@@ -24,7 +25,8 @@ class MysqldumpImportExportAdapter implements DatabaseImportExportAdapterInterfa
         ?ShellAdapterInterface $shellAdapter = null,
         ?ImportPlugin          $importPlugin = null,
         ?ExportPlugin          $exportPlugin = null,
-        ?LoggerInterface      $logger = null
+        ?LoggerInterface      $logger = null,
+        ?TlsOptions            $tls = null
     ) {
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -34,11 +36,11 @@ class MysqldumpImportExportAdapter implements DatabaseImportExportAdapterInterfa
         }
 
         if (is_null($importPlugin)) {
-            $importPlugin = new ImportPlugin($shellAdapter, $username, $password, $host, $port, $logger);
+            $importPlugin = new ImportPlugin($shellAdapter, $username, $password, $host, $port, $logger, $tls);
         }
         $this->importPlugin = $importPlugin;
         if (is_null($exportPlugin)) {
-            $exportPlugin = new ExportPlugin($shellAdapter, $username, $password, $host, $port, $logger);
+            $exportPlugin = new ExportPlugin($shellAdapter, $username, $password, $host, $port, $logger, $tls);
         }
         $this->exportPlugin = $exportPlugin;
     }

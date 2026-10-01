@@ -22,6 +22,55 @@ Note that snapshots are only forward compatible: a dump written by 0.x restores 
 dump written by 1.0 cannot be restored by 0.x myloader. Upgrade the loader before you start taking
 snapshots with it.
 
+## Connecting over TLS
+
+Every adapter (`DatabaseAdapter`, and the mydumper, mysqldump and tab-delimited import/export
+adapters) accepts five optional arguments. Without them, connections are opened exactly as before.
+
+| Argument     | Default | Meaning                                                                      |
+|--------------|---------|------------------------------------------------------------------------------|
+| `tls`        | `0`     | Encrypt every connection. Once on, a connection never falls back to plaintext. |
+| `tls_ca`     | empty   | CA bundle to trust: a path, or the PEM itself. Empty uses the system trust store. |
+| `tls_cert`   | empty   | Client certificate, a path or the PEM. Set together with `tls_key`.          |
+| `tls_key`    | empty   | Client key, a path or the PEM.                                               |
+| `tls_verify` | `1`     | Verify the server's certificate chain and host name. `0` encrypts without verifying, and logs a warning once. |
+
+```yaml
+database:
+  adapters:
+    default:
+      class: ConductorMySqlSupport\Adapter\DatabaseAdapter
+      arguments:
+        username: '${DATABASE_USER}'
+        password: '${DATABASE_PASSWORD}'
+        host: '${DATABASE_HOST}'
+        port: '${DATABASE_PORT:-3306}'
+        tls: '${DATABASE_TLS:-0}'
+        tls_ca: '${DATABASE_TLS_CA|b64decode:-}'
+        tls_verify: '${DATABASE_TLS_VERIFY:-1}'
+```
+
+Interpolated values are strings, so `"0"`, `"1"` and `""` are accepted (as are `true`/`false`,
+`yes`/`no` and `on`/`off`).
+
+A certificate is a path or the PEM itself. From the environment it is a base64 PEM, decoded with
+`|b64decode`, the same way a project passes its JWT keys; the adapter writes PEM content to a
+private temporary file (mode 0600) and removes it when conductor exits. That file is local, so a
+shell adapter that runs the `mysql`/`mydumper` commands on another host needs a path that exists
+there. Empty, or a path to an empty file, means none. With `tls` off the certificates are ignored,
+so they can be set before TLS is turned on.
+
+For Amazon RDS and Aurora, the region's CA bundle fits in a variable
+(`https://truststore.pki.rds.amazonaws.com/<region>/<region>-bundle.pem`, about 6 KB as base64). The
+global bundle does not: it is 227 KB as base64 and Linux caps one variable at 128 KB. Install it in
+the image's system trust store instead and leave `tls_ca` empty.
+
+The same settings reach the PHP connection, `mysql` and `mysqldump`, and `mydumper`/`myloader`.
+`mysql` and `mysqldump` on the host may be MySQL's or MariaDB's, whose TLS flags differ (MySQL 8 has
+only `--ssl-mode`; MariaDB has `--ssl` and `--ssl-verify-server-cert`). The adapter passes each
+flavor's flags with the `--loose-` prefix, which both clients honor by skipping an option they do not
+know. The skipped option prints a warning on stderr, which conductor logs at debug level.
+
 ## Restoring a dump onto a different engine
 
 The mydumper adapter removes `sql_mode` values the target server does not recognize from an extracted

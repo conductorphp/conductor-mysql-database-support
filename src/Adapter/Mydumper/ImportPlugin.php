@@ -2,6 +2,7 @@
 
 namespace ConductorMySqlSupport\Adapter\Mydumper;
 
+use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use ConductorMySqlSupport\Exception;
 use Psr\Log\LoggerAwareInterface;
@@ -37,6 +38,8 @@ class ImportPlugin
     private RestorePreflight $restorePreflight;
 
 
+    private TlsOptions $tls;
+
     public function __construct(
         ShellAdapterInterface $shellAdapter,
         string                $username,
@@ -45,8 +48,10 @@ class ImportPlugin
         int                   $port = 3306,
         ?LoggerInterface      $logger = null,
         ?SqlModeSanitizer     $sqlModeSanitizer = null,
-        ?RestorePreflight     $restorePreflight = null
+        ?RestorePreflight     $restorePreflight = null,
+        ?TlsOptions $tls = null
     ) {
+        $this->tls = $tls ?? TlsOptions::disabled();
         $this->username = $username;
         $this->password = $password;
         $this->host = $host;
@@ -58,14 +63,14 @@ class ImportPlugin
         $this->logger = $logger;
         if (is_null($sqlModeSanitizer)) {
             $sqlModeSanitizer = new SqlModeSanitizer(
-                new TargetSqlModeSupport($username, $password, $host, $port, $logger),
+                new TargetSqlModeSupport($username, $password, $host, $port, $logger, null, $this->tls),
                 $logger
             );
         }
         $this->sqlModeSanitizer = $sqlModeSanitizer;
         if (is_null($restorePreflight)) {
             $restorePreflight = new RestorePreflight(
-                new TargetSchemaSupport($username, $password, $host, $port, $logger),
+                new TargetSchemaSupport($username, $password, $host, $port, $logger, null, $this->tls),
                 $logger
             );
         }
@@ -194,7 +199,7 @@ class ImportPlugin
             escapeshellarg($this->port),
             escapeshellarg($this->username),
             $this->password ? '-p ' . escapeshellarg($this->password) . ' ' : ''
-        );
+        ) . $this->tls->mydumperArguments();
     }
 
 

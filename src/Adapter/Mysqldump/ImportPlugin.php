@@ -2,6 +2,7 @@
 
 namespace ConductorMySqlSupport\Adapter\Mysqldump;
 
+use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Exception;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
@@ -19,14 +20,18 @@ class ImportPlugin
     private LoggerInterface $logger;
 
 
+    private TlsOptions $tls;
+
     public function __construct(
         ShellAdapterInterface $shellAdapter,
         string                $username,
         string                $password,
         string                $host = 'localhost',
         int                   $port = 3306,
-        ?LoggerInterface      $logger = null
+        ?LoggerInterface      $logger = null,
+        ?TlsOptions $tls = null
     ) {
+        $this->tls = $tls ?? TlsOptions::disabled();
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -108,7 +113,7 @@ class ImportPlugin
             escapeshellarg($this->port),
             escapeshellarg($this->username),
             $this->password ? '-p' . escapeshellarg($this->password) . ' ' : ''
-        );
+        ) . $this->tls->mysqlClientArguments();
     }
 
     /**
@@ -131,7 +136,13 @@ class ImportPlugin
             throw new Exception\RuntimeException('Invalid file extension. Should be .sql or .sql.gz.');
         }
 
-        $filename = realpath($filename);
+        $path = realpath($filename);
+        if (false === $path) {
+            // realpath() is false for a missing file, which used to become an empty input redirect
+            // and a confusing shell failure.
+            throw new Exception\RuntimeException(sprintf('Import file "%s" does not exist.', $filename));
+        }
+        $filename = $path;
         // Extract gzip if needed
         if (0 === strcasecmp('.sql.gz', substr($filename, -7))) {
             $this->shellAdapter->runShellCommand('gunzip -f ' . escapeshellarg($filename));
