@@ -235,7 +235,11 @@ class ImportPlugin
 
     /**
      * Fix metadata file from old mydumper versions that don't include the [snapshot] group header
-     * and use old text format instead of key=value format
+     * and use old text format instead of key=value format.
+     *
+     * myloader 1.0.5 also requires a [config] group and aborts without one ("Section [config] was not
+     * found on metadata file", exit 133), whether the file was converted here or already has groups
+     * (CTAP-2140). An empty group is enough: myloader then uses its defaults.
      */
     private function fixMetadataFile(string $extractedPath): void
     {
@@ -258,6 +262,11 @@ class ImportPlugin
         // line sent those dumps through the conversion below, which drops every line that is neither a
         // comment nor a key=value pair — including all of those group headers.
         if (preg_match('/^\s*\[.+\]\s*$/m', $content)) {
+            if (!preg_match('/^\s*\[config\]\s*$/m', $content)) {
+                $this->writeMetadataFile($metadataFile, rtrim($content, "\n") . "\n\n[config]\n");
+                $this->logger->info('Added the [config] group myloader requires to the metadata file');
+            }
+
             return;
         }
 
@@ -313,14 +322,21 @@ class ImportPlugin
             $this->logger->warning("No valid metadata found in file, adding minimal [snapshot] header");
         }
 
-        $fixedContent = implode("\n", $fixedLines) . "\n";
+        $fixedContent = implode("\n", $fixedLines) . "\n\n[config]\n";
 
-        if (file_put_contents($metadataFile, $fixedContent) === false) {
+        if ($this->writeMetadataFile($metadataFile, $fixedContent)) {
+            $this->logger->info("Fixed metadata file from old mydumper version by converting to [snapshot] format");
+        }
+    }
+
+    private function writeMetadataFile(string $metadataFile, string $content): bool
+    {
+        if (file_put_contents($metadataFile, $content) === false) {
             $this->logger->warning("Failed to fix metadata file at $metadataFile");
-            return;
+            return false;
         }
 
-        $this->logger->info("Fixed metadata file from old mydumper version by converting to [snapshot] format");
+        return true;
     }
 
     public function assertIsUsable(): void

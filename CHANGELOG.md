@@ -1,3 +1,10 @@
+[6.3.2](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.3.1...6.3.2) (2026-10-03)
+
+### Bug Fixes
+* the [config] group myloader 1.0.5 requires to snapshot metadata (CTAP-2140) ([6873c3b](https://github.com/conductorphp/conductor-mysql-database-support/commit/6873c3b8a47bfdcc3db6affbb413fcd440b542b8))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [6.3.1](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.3.0...6.3.1) (2026-10-01)
 
 ### Bug Fixes

@@ -74,9 +74,42 @@ class ImportPluginTest extends TestCase
         $this->fixMetadataFile();
 
         $this->assertSame(
-            "[snapshot]\nstarted=2025-11-12 09:00:08\nfinished=2025-11-12 09:00:08\n",
+            "[snapshot]\nstarted=2025-11-12 09:00:08\nfinished=2025-11-12 09:00:08\n\n[config]\n",
             file_get_contents($this->dumpDir . '/metadata')
         );
+    }
+
+    /**
+     * CTAP-2140. myloader 1.0.5 aborts on a metadata file without a [config] group ("Section [config]
+     * was not found on metadata file", exit 133), even when the file already has other groups.
+     */
+    public function testAddsTheConfigGroupMyLoaderRequiresWhenGroupsLackIt(): void
+    {
+        $withoutConfig = <<<METADATA
+            # Started dump at: 2026-10-03 10:58:47
+            [myloader_session_variables]
+            SQL_MODE='NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION' /*!40101
+
+            [`middleware`.`product`]
+            real_table_name=product
+            rows = 2
+            # Finished dump at: 2026-10-03 10:58:47
+
+            METADATA;
+        file_put_contents($this->dumpDir . '/metadata', $withoutConfig);
+
+        $this->fixMetadataFile();
+
+        $this->assertSame($withoutConfig . "\n[config]\n", file_get_contents($this->dumpDir . '/metadata'));
+    }
+
+    public function testAConvertedLegacyFileHasTheConfigGroup(): void
+    {
+        file_put_contents($this->dumpDir . '/metadata', self::LEGACY_METADATA);
+
+        $this->fixMetadataFile();
+
+        $this->assertMatchesRegularExpression('/^\[config\]$/m', file_get_contents($this->dumpDir . '/metadata'));
     }
 
     public function testReportsTheErrorsMyLoaderActuallyDiedOn(): void
