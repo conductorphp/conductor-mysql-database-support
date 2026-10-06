@@ -1,3 +1,10 @@
+[6.3.4](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.3.3...6.3.4) (2026-10-06)
+
+### Bug Fixes
+* export dumps each table from the configured server (CTAP-2221) ([0565b6a](https://github.com/conductorphp/conductor-mysql-database-support/commit/0565b6a823d5790a925d76b93f582f66f467bbd0))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [6.3.3](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.3.2...6.3.3) (2026-10-06)
 
 ### Bug Fixes

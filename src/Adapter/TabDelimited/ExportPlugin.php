@@ -151,12 +151,16 @@ class ExportPlugin
 
                 $numFiles = ceil($numRows / $rowsPerFile);
                 $fileNumber = 1;
+                // The connection arguments were missing here, so the dump read from the client's default
+                // server rather than the configured one (CTAP-2221). LIMIT is offset,COUNT: this was
+                // `$i + $rowsPerFile`, which made every file after the first overlap the next.
                 for ($i = 0; $i < $numRows; $i += $rowsPerFile) {
                     $dumpDataCommand .= "echo 'Exporting \"$table\" data [$fileNumber/$numFiles].' 1>&2 && "
                         . 'mysql ' . escapeshellarg($database) . ' --skip-column-names -e "SELECT * FROM \`' . $table
                         . '\` '
                         . $orderBy
-                        . 'LIMIT ' . $i . ',' . ($i + $rowsPerFile) . '" '
+                        . 'LIMIT ' . $i . ',' . $rowsPerFile . '" '
+                        . $this->getMysqlCommandConnectionArguments() . ' '
                         . '> ' . escapeshellarg("$workingDir/$table.$fileNumber.txt") . ' '
                         . '&& ';
                     $fileNumber++;
