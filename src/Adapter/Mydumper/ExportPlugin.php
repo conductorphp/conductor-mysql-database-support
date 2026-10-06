@@ -2,6 +2,7 @@
 
 namespace ConductorMySqlSupport\Adapter\Mydumper;
 
+use ConductorMySqlSupport\Adapter\ClientCredentials;
 use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
@@ -16,10 +17,7 @@ class ExportPlugin
     private const OPTION_IGNORE_TABLES = 'ignore_tables';
     private const OPTION_REMOVE_DEFINERS = 'remove_definers';
 
-    private string $username;
-    private string $password;
-    private string $host;
-    private int $port;
+    private ClientCredentials $credentials;
     private ShellAdapterInterface $shellAdapter;
     private LoggerInterface $logger;
 
@@ -36,10 +34,7 @@ class ExportPlugin
         ?TlsOptions $tls = null
     ) {
         $this->tls = $tls ?? TlsOptions::disabled();
-        $this->username = $username;
-        $this->password = $password;
-        $this->host = $host;
-        $this->port = $port;
+        $this->credentials = new ClientCredentials($username, $password, $host, $port);
         $this->shellAdapter = $shellAdapter;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -66,7 +61,12 @@ class ExportPlugin
             // Every path in the command is relative, so the working directory has to be the command's
             // own. Left to the process's cwd, the dump and the archive land wherever conductor was
             // started from while the returned path claims they are under $path.
-            $this->shellAdapter->runShellCommand($command, $workingDir, null, ShellAdapterInterface::PRIORITY_LOW);
+            $this->shellAdapter->runShellCommand(
+                $command,
+                $workingDir,
+                $this->credentials->environment(),
+                ShellAdapterInterface::PRIORITY_LOW
+            );
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
@@ -204,13 +204,8 @@ class ExportPlugin
 
     private function getMysqldumperCommandConnectionArguments(): string
     {
-        return sprintf(
-            '-h %s -P %s -u %s %s',
-            escapeshellarg($this->host),
-            escapeshellarg($this->port),
-            escapeshellarg($this->username),
-            $this->password ? '-p ' . escapeshellarg($this->password) . ' ' : ''
-        ) . $this->tls->mydumperArguments();
+        // The password is not among them: it reaches the client as MYSQL_PWD (CTAP-2218).
+        return $this->credentials->connectionArguments() . $this->tls->mydumperArguments();
     }
 
     private function getDataTables(string $database, array $options): array
@@ -219,7 +214,7 @@ class ExportPlugin
         if (!empty($options[self::OPTION_IGNORE_TABLES])) {
             $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
                 . $this->getMysqlCommandConnectionArguments() . ' ';
-            $tables = trim($this->shellAdapter->runShellCommand($command));
+            $tables = trim($this->shellAdapter->runShellCommand($command, null, $this->credentials->environment()));
             if (!$tables) {
                 return [];
             }
@@ -279,13 +274,8 @@ class ExportPlugin
 
     private function getMysqlCommandConnectionArguments(): string
     {
-        return sprintf(
-            '-h %s -P %s -u %s %s',
-            escapeshellarg($this->host),
-            escapeshellarg($this->port),
-            escapeshellarg($this->username),
-            $this->password ? '-p' . escapeshellarg($this->password) . ' ' : ''
-        ) . $this->tls->mysqlClientArguments();
+        // The password is not among them: it reaches the client as MYSQL_PWD (CTAP-2218).
+        return $this->credentials->connectionArguments() . $this->tls->mysqlClientArguments();
     }
 
     public function assertIsUsable(): void

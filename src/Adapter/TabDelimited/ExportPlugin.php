@@ -2,6 +2,7 @@
 
 namespace ConductorMySqlSupport\Adapter\TabDelimited;
 
+use ConductorMySqlSupport\Adapter\ClientCredentials;
 use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Exception;
@@ -16,10 +17,7 @@ class ExportPlugin
     private const OPTION_IGNORE_TABLES = 'ignore_tables';
     private const OPTION_REMOVE_DEFINERS = 'remove_definers';
 
-    private string $username;
-    private string $password;
-    private string $host;
-    private int $port;
+    private ClientCredentials $credentials;
     private ShellAdapterInterface $shellAdapter;
     private LoggerInterface $logger;
 
@@ -40,10 +38,7 @@ class ExportPlugin
             $logger = new NullLogger();
         }
 
-        $this->username = $username;
-        $this->password = $password;
-        $this->host = $host;
-        $this->port = $port;
+        $this->credentials = new ClientCredentials($username, $password, $host, $port);
         $this->shellAdapter = $shellAdapter;
         $this->logger = $logger;
     }
@@ -105,7 +100,12 @@ class ExportPlugin
         );
 
         try {
-            $this->shellAdapter->runShellCommand($command, null, null, ShellAdapterInterface::PRIORITY_LOW);
+            $this->shellAdapter->runShellCommand(
+                $command,
+                null,
+                $this->credentials->environment(),
+                ShellAdapterInterface::PRIORITY_LOW
+            );
             $this->shellAdapter->runShellCommand('rm -rf ' . escapeshellarg($workingDir));
 
         } catch (\Exception $e) {
@@ -131,7 +131,7 @@ class ExportPlugin
                 $numRowsCommand = 'mysql ' . escapeshellarg($database)
                     . ' --skip-column-names --silent -e "SELECT COUNT(*) FROM \`' . $table . '\`" '
                     . $this->getMysqlCommandConnectionArguments() . ' ';
-                $numRows = (int)$this->shellAdapter->runShellCommand($numRowsCommand);
+                $numRows = (int)$this->shellAdapter->runShellCommand($numRowsCommand, null, $this->credentials->environment());
                 if (0 === $numRows) {
                     continue;
                 }
@@ -142,7 +142,7 @@ class ExportPlugin
                     . 'AND \`TABLE_NAME\` = ' . escapeshellarg($table) . ' '
                     . 'AND \`COLUMN_KEY\` = \'PRI\'" '
                     . $this->getMysqlCommandConnectionArguments() . ' ';
-                $primaryKeys = trim($this->shellAdapter->runShellCommand($getPrimaryKeyCommand));
+                $primaryKeys = trim($this->shellAdapter->runShellCommand($getPrimaryKeyCommand, null, $this->credentials->environment()));
                 if ($primaryKeys) {
                     $orderBy = 'ORDER BY \`' . implode('\`,\`', explode("\n", $primaryKeys)) . '\` ';
                 } else {
@@ -177,13 +177,8 @@ class ExportPlugin
 
     private function getMysqlCommandConnectionArguments(): string
     {
-        return sprintf(
-            '-h %s -P %s -u %s %s',
-            escapeshellarg($this->host),
-            escapeshellarg($this->port),
-            escapeshellarg($this->username),
-            $this->password ? '-p' . escapeshellarg($this->password) . ' ' : ''
-        ) . $this->tls->mysqlClientArguments();
+        // The password is not among them: it reaches the client as MYSQL_PWD (CTAP-2218).
+        return $this->credentials->connectionArguments() . $this->tls->mysqlClientArguments();
     }
 
     private function getDumpStructureCommand(string $database, array $options): string
@@ -263,7 +258,7 @@ class ExportPlugin
     {
         $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
             . $this->getMysqlCommandConnectionArguments() . ' ';
-        $allTables = explode("\n", trim($this->shellAdapter->runShellCommand($command)));
+        $allTables = explode("\n", trim($this->shellAdapter->runShellCommand($command, null, $this->credentials->environment())));
         $ignoredTables = [];
         foreach ($options[self::OPTION_IGNORE_TABLES] as $pattern) {
             $ignoredTables += array_filter($allTables, function ($table) use ($pattern) {

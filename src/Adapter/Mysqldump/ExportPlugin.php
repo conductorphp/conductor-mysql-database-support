@@ -2,6 +2,7 @@
 
 namespace ConductorMySqlSupport\Adapter\Mysqldump;
 
+use ConductorMySqlSupport\Adapter\ClientCredentials;
 use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Exception;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
@@ -14,10 +15,7 @@ class ExportPlugin
     private const OPTION_IGNORE_TABLES = 'ignore_tables';
     private const OPTION_REMOVE_DEFINERS = 'remove_definers';
 
-    private string $username;
-    private string $password;
-    private string $host;
-    private int $port;
+    private ClientCredentials $credentials;
     private ShellAdapterInterface $shellAdapter;
     private LoggerInterface $logger;
 
@@ -34,10 +32,7 @@ class ExportPlugin
         ?TlsOptions $tls = null
     ) {
         $this->tls = $tls ?? TlsOptions::disabled();
-        $this->username = $username;
-        $this->password = $password;
-        $this->host = $host;
-        $this->port = $port;
+        $this->credentials = new ClientCredentials($username, $password, $host, $port);
         $this->shellAdapter = $shellAdapter;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -103,7 +98,10 @@ class ExportPlugin
         if (!empty($options[self::OPTION_IGNORE_TABLES])) {
             $command = 'mysql --skip-column-names --silent -e "SHOW TABLES from \`' . $database . '\`;" '
                 . $this->getCommandConnectionArguments() . ' ';
-            $allTables = explode("\n", trim($this->shellAdapter->runShellCommand($command)));
+            $allTables = explode(
+                "\n",
+                trim($this->shellAdapter->runShellCommand($command, null, $this->credentials->environment()))
+            );
             $ignoredTables = [];
             foreach ($options[self::OPTION_IGNORE_TABLES] as $pattern) {
                 $ignoredTables += array_filter($allTables, function ($table) use ($pattern) {
@@ -119,7 +117,12 @@ class ExportPlugin
             . '| gzip -9 > ' . escapeshellarg("$path/$database.sql.gz");
 
         try {
-            $this->shellAdapter->runShellCommand($command, null, null, ShellAdapterInterface::PRIORITY_LOW);
+            $this->shellAdapter->runShellCommand(
+                $command,
+                null,
+                $this->credentials->environment(),
+                ShellAdapterInterface::PRIORITY_LOW
+            );
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
         }
@@ -144,13 +147,8 @@ class ExportPlugin
 
     private function getCommandConnectionArguments(): string
     {
-        return sprintf(
-            '-h %s -P %s -u %s %s',
-            escapeshellarg($this->host),
-            escapeshellarg($this->port),
-            escapeshellarg($this->username),
-            $this->password ? '-p' . escapeshellarg($this->password) . ' ' : ''
-        ) . $this->tls->mysqlClientArguments();
+        // The password is not among them: it reaches the client as MYSQL_PWD (CTAP-2218).
+        return $this->credentials->connectionArguments() . $this->tls->mysqlClientArguments();
     }
 
     private function getDumpStructureCommand(string $database, array $options): string

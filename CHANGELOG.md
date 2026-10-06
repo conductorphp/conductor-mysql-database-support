@@ -1,3 +1,10 @@
+[6.3.3](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.3.2...6.3.3) (2026-10-06)
+
+### Bug Fixes
+* the password as MYSQL_PWD, never on the command line (CTAP-2218) ([75f6af1](https://github.com/conductorphp/conductor-mysql-database-support/commit/75f6af12852f1fddde1c481c32f0cbe3848f6ff8))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [6.3.2](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.3.1...6.3.2) (2026-10-03)
 
 ### Bug Fixes

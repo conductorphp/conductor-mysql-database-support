@@ -2,6 +2,7 @@
 
 namespace ConductorMySqlSupport\Adapter\TabDelimited;
 
+use ConductorMySqlSupport\Adapter\ClientCredentials;
 use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Exception;
@@ -12,10 +13,7 @@ use Psr\Log\NullLogger;
 
 class ImportPlugin
 {
-    private string $username;
-    private string $password;
-    private string $host;
-    private int $port;
+    private ClientCredentials $credentials;
     private ShellAdapterInterface $shellAdapter;
     private LoggerInterface $logger;
 
@@ -36,10 +34,7 @@ class ImportPlugin
             $logger = new NullLogger();
         }
 
-        $this->username = $username;
-        $this->password = $password;
-        $this->host = $host;
-        $this->port = $port;
+        $this->credentials = new ClientCredentials($username, $password, $host, $port);
         $this->shellAdapter = $shellAdapter;
         $this->logger = $logger;
     }
@@ -96,7 +91,12 @@ class ImportPlugin
         $command = $this->getTabDelimitedFileImportCommand($database, $extractedDir);
 
         try {
-            $this->shellAdapter->runShellCommand($command, null, null, ShellAdapterInterface::PRIORITY_LOW);
+            $this->shellAdapter->runShellCommand(
+                $command,
+                null,
+                $this->credentials->environment(),
+                ShellAdapterInterface::PRIORITY_LOW
+            );
             $this->shellAdapter->runShellCommand('rm -rf ' . escapeshellarg($extractedDir));
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage());
@@ -125,13 +125,8 @@ class ImportPlugin
 
     private function getMysqlCommandConnectionArguments(): string
     {
-        return sprintf(
-            '-h %s -P %s -u %s %s',
-            escapeshellarg($this->host),
-            escapeshellarg($this->port),
-            escapeshellarg($this->username),
-            $this->password ? '-p' . escapeshellarg($this->password) . ' ' : ''
-        ) . $this->tls->mysqlClientArguments();
+        // The password is not among them: it reaches the client as MYSQL_PWD (CTAP-2218).
+        return $this->credentials->connectionArguments() . $this->tls->mysqlClientArguments();
     }
 
     /**
