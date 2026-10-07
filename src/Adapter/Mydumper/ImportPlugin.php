@@ -34,6 +34,7 @@ class ImportPlugin
     private LoggerInterface $logger;
     private SqlModeSanitizer $sqlModeSanitizer;
     private RestorePreflight $restorePreflight;
+    private TargetBinlogSupport $binlogSupport;
 
 
     private TlsOptions $tls;
@@ -47,7 +48,8 @@ class ImportPlugin
         ?LoggerInterface      $logger = null,
         ?SqlModeSanitizer     $sqlModeSanitizer = null,
         ?RestorePreflight     $restorePreflight = null,
-        ?TlsOptions $tls = null
+        ?TlsOptions $tls = null,
+        ?TargetBinlogSupport  $binlogSupport = null
     ) {
         $this->tls = $tls ?? TlsOptions::disabled();
         $this->credentials = new ClientCredentials($username, $password, $host, $port);
@@ -70,6 +72,8 @@ class ImportPlugin
             );
         }
         $this->restorePreflight = $restorePreflight;
+        $this->binlogSupport = $binlogSupport
+            ?? new TargetBinlogSupport($username, $password, $host, $port, $logger, null, $this->tls);
     }
 
     public function importFromFile(
@@ -84,7 +88,14 @@ class ImportPlugin
         $this->sqlModeSanitizer->sanitize($extractedPath);
 
         $errorLog = $extractedPath . self::ERROR_LOG_SUFFIX;
-        $command = $this->getMyDumperImportCommand($database, $extractedPath, $errorLog);
+        $canDisableBinlog = $this->binlogSupport->canDisableBinlog();
+        if (!$canDisableBinlog) {
+            $this->logger->info(
+                'This user may not turn off binary logging for its session, so the restore will be written to '
+                . 'the binary log.'
+            );
+        }
+        $command = $this->getMyDumperImportCommand($database, $extractedPath, $errorLog, $canDisableBinlog);
 
         try {
             $this->restorePreflight->check($extractedPath, $database);
@@ -130,7 +141,7 @@ class ImportPlugin
     {
         $reasons = $this->getMyLoaderErrors($errorLog);
         if (!$reasons) {
-            return $exception->getMessage();
+            return MydumperLog::describeFailure($exception);
         }
 
         return "myloader failed to restore the dump:\n  " . implode("\n  ", $reasons)
@@ -176,8 +187,12 @@ class ImportPlugin
     }
 
 
-    private function getMyDumperImportCommand(string $database, string $importDir, string $errorLog): string
-    {
+    private function getMyDumperImportCommand(
+        string $database,
+        string $importDir,
+        string $errorLog,
+        bool $canDisableBinlog = true
+    ): string {
         // --drop-table=DROP is mydumper 1.0's spelling of what 0.x called --overwrite-tables. Passing
         // the mode explicitly rather than relying on the bare flag's default keeps it readable, and
         // avoids the option's optional argument swallowing whatever token follows it.
@@ -185,8 +200,17 @@ class ImportPlugin
         // tee keeps myloader's progress streaming to the shell adapter while also capturing it. The
         // adapter reads stderr to EOF, which only happens once tee has exited, so the log file is
         // complete by the time the command returns.
-        return 'myloader --database ' . escapeshellarg($database) . ' --directory '
-            . escapeshellarg($importDir) . ' -v 3 --drop-table=DROP '
+        $command = 'myloader --database ' . escapeshellarg($database) . ' --directory '
+            . escapeshellarg($importDir) . ' -v 3 --drop-table=DROP ';
+
+        // --enable-binlog only stops myloader sending SET SESSION SQL_LOG_BIN = 0, which this user may
+        // not send (see TargetBinlogSupport). The restore is then binlogged like any other write the
+        // user makes, which on a managed database is the provider's choice, not ours.
+        if (!$canDisableBinlog) {
+            $command .= '--enable-binlog ';
+        }
+
+        return $command
             . $this->getMysqlCommandConnectionArguments()
             . ' 2> >(tee ' . escapeshellarg($errorLog) . ' >&2)';
     }
@@ -381,6 +405,7 @@ class ImportPlugin
         }
         $this->sqlModeSanitizer->setLogger($logger);
         $this->restorePreflight->setLogger($logger);
+        $this->binlogSupport->setLogger($logger);
         $this->logger = $logger;
     }
 }

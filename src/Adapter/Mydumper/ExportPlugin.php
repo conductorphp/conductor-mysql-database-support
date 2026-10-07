@@ -5,6 +5,7 @@ namespace ConductorMySqlSupport\Adapter\Mydumper;
 use ConductorMySqlSupport\Adapter\ClientCredentials;
 use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
+use ConductorCore\Exception\ShellCommandFailedException;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use ConductorMySqlSupport\Exception;
 use Psr\Log\LoggerAwareInterface;
@@ -16,6 +17,19 @@ class ExportPlugin
 {
     private const OPTION_IGNORE_TABLES = 'ignore_tables';
     private const OPTION_REMOVE_DEFINERS = 'remove_definers';
+
+    /** The steps of getMyDumperExportCommands() that run mydumper itself. */
+    private const MYDUMPER_STEPS = ['schema', 'data'];
+
+    /**
+     * What mydumper logs when the user cannot read the binary log position: ERROR 1227 is "Access
+     * denied; you need (at least one of) the SUPER, REPLICATION CLIENT privilege(s)". Newer releases
+     * say "source" where 1.0 says "master".
+     */
+    private const SOURCE_POSITION_DENIED = '/^Couldn\'t get (master|source) position - ERROR 1227: /';
+
+    /** A MySQL error as mydumper logs it, at whatever level. */
+    private const MYSQL_ERROR = '/ - ERROR \d+: /';
 
     private ClientCredentials $credentials;
     private ShellAdapterInterface $shellAdapter;
@@ -54,21 +68,39 @@ class ExportPlugin
         $this->assertIsUsable();
         $this->validateOptions($options);
 
-        $command = $this->getMyDumperExportCommand($database, $options);
+        $commands = $this->getMyDumperExportCommands($database, $options);
         $archive = "$workingDir/$database.tgz";
 
         try {
-            // Every path in the command is relative, so the working directory has to be the command's
-            // own. Left to the process's cwd, the dump and the archive land wherever conductor was
-            // started from while the returned path claims they are under $path.
-            $this->shellAdapter->runShellCommand(
-                $command,
-                $workingDir,
-                $this->credentials->environment(),
-                ShellAdapterInterface::PRIORITY_LOW
-            );
+            foreach ($commands as $step => $command) {
+                // Every path in the command is relative, so the working directory has to be the
+                // command's own. Left to the process's cwd, the dump and the archive land wherever
+                // conductor was started from while the returned path claims they are under $path.
+                try {
+                    $this->shellAdapter->runShellCommand(
+                        $command,
+                        $workingDir,
+                        $this->credentials->environment(),
+                        ShellAdapterInterface::PRIORITY_LOW
+                    );
+                } catch (\Exception $e) {
+                    $isMydumper = in_array($step, self::MYDUMPER_STEPS, true);
+                    if (!($isMydumper && $this->failedOnlyOnSourcePosition($e))) {
+                        throw $e;
+                    }
+
+                    $this->logger->info(
+                        'mydumper could not read the binary log position, which needs the REPLICATION CLIENT '
+                        . 'privilege. A snapshot does not use it, so the export continues.'
+                    );
+                }
+            }
         } catch (\Exception $e) {
-            throw new Exception\RuntimeException($e->getMessage());
+            throw new Exception\RuntimeException(
+                MydumperLog::describeFailure($e) . "\n" . ltrim($this->describeLeftoverWorkingDir($workingDir)),
+                0,
+                $e
+            );
         }
 
         $this->assertArchiveIsRestorable($archive, $workingDir);
@@ -143,17 +175,22 @@ class ExportPlugin
         return " The working directory \"$workingDir\" was left in place so the failure can be diagnosed.";
     }
 
-    private function getMyDumperExportCommand(string $database, array $options): string
+    /**
+     * @return array<string, string> The export's shell commands by step, in the order they run. Each
+     *                               runs on its own so a mydumper exit status can be judged by itself.
+     */
+    private function getMyDumperExportCommands(string $database, array $options): array
     {
-        # Every path below is relative to the working directory this command is run in, which is the
+        # Every path below is relative to the working directory these commands are run in, which is the
         # directory the export owns. That also keeps find off the caller's cwd, which it cannot always
         # read and fails on when it cannot.
         # @link https://unix.stackexchange.com/questions/349894/can-i-tell-find-to-to-not-restore-initial-working-directory
 
-        $dumpStructureCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
+        $commands = [];
+        $commands['schema'] = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
             . escapeshellarg($database) . ' --clear -v 3 --no-data --triggers --events --routines '
             . '--sync-thread-lock-mode=LOCK_ALL '
-            . $this->getMysqldumperCommandConnectionArguments() . ' ';
+            . $this->getMysqldumperCommandConnectionArguments();
 
         // 🚨 Read the option truthfully. This was `empty($options[...])`, which inverted it: the
         // rewrite ran only when the option was FALSY, so `remove_definers => true` DISABLED removal.
@@ -175,31 +212,65 @@ class ExportPlugin
         // cannot, and which is how the original inversion hid for so long.
         if ($options[self::OPTION_REMOVE_DEFINERS] ?? true) {
             // Replace definer in triggers and views with CURRENT_USER
-            $dumpStructureCommand .= '&& find ' . escapeshellarg($database)
+            $commands['definers'] = 'find ' . escapeshellarg($database)
                 . ' \( -name "*-schema-view.sql" -o -name "*-schema-triggers.sql" \)'
                 . ' -exec sed -ri \'s|DEFINER=[^ ]+ |DEFINER=CURRENT_USER |g\' {} \;';
         }
 
-        $dumpDataCommand = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
+        $commands['data'] = 'mydumper --database ' . escapeshellarg($database) . ' --outputdir '
             . escapeshellarg($database) . ' --merge -v 3 --no-schemas '
             . '--sync-thread-lock-mode=LOCK_ALL '
-            . $this->getMysqldumperCommandConnectionArguments() . ' ';
+            . $this->getMysqldumperCommandConnectionArguments();
 
         $dataTables = $this->getDataTables($database, $options);
         if ($dataTables) {
-            $dumpDataCommand .= '--tables-list ' . implode(',', $dataTables);
+            $commands['data'] .= ' --tables-list ' . implode(',', $dataTables);
         }
 
         // @todo Move this to somewhere else. This is specific to a known Magento issue
         // Avoid issue with tables that defaults timestamp fields to '0000-00-00 00:00:00', which cause on error on
         // import
-        $fixTimestampDefaultIssueCommand = 'find ' . escapeshellarg($database)
+        $commands['timestamps'] = 'find ' . escapeshellarg($database)
             . ' -name "*.sql" -exec sed -ri "s|(timestamp\|datetime) (NOT )?NULL DEFAULT '
             . '\'0000-00-00 00:00:00\'|\1 \2NULL DEFAULT CURRENT_TIMESTAMP|gI" {} \;';
 
-        $tarCommand = 'tar -czf ' . escapeshellarg("$database.tgz") . ' ' . escapeshellarg($database);
+        $commands['archive'] = 'tar -czf ' . escapeshellarg("$database.tgz") . ' ' . escapeshellarg($database);
 
-        return "$dumpStructureCommand && $dumpDataCommand && $fixTimestampDefaultIssueCommand && $tarCommand";
+        return $commands;
+    }
+
+    /**
+     * mydumper reads the binary log position at the start and end of every dump, whatever it is
+     * asked for, and 1.0 has no option to skip it. The query needs SUPER or REPLICATION CLIENT, which a
+     * managed database's app user does not have (it holds ALL PRIVILEGES on its own database only),
+     * so mydumper writes the whole dump, logs the denial as a WARNING and still counts it as an error:
+     * exit status 1. A snapshot has no use for the position, so that one failure is let through.
+     *
+     * Only that one. Every other error mydumper counts is either a MySQL error logged with its code
+     * ("- ERROR 1146: …") or a CRITICAL, so exit 1 is let through only when the position denial is
+     * present and nothing else of either kind is. The archive is still checked afterwards.
+     */
+    private function failedOnlyOnSourcePosition(\Exception $exception): bool
+    {
+        if (!$exception instanceof ShellCommandFailedException || 1 !== $exception->getExitStatus()) {
+            return false;
+        }
+
+        $positionDenied = false;
+        foreach (MydumperLog::problems($exception->getStderr()) as [$level, $message]) {
+            if ('WARNING' === $level && preg_match(self::SOURCE_POSITION_DENIED, $message)) {
+                $positionDenied = true;
+                continue;
+            }
+
+            // A WARNING without a MySQL error code is not counted (e.g. the --trx-tables advice
+            // printed on every run); anything above a WARNING, or with a code, is.
+            if ('WARNING' !== $level || preg_match(self::MYSQL_ERROR, $message)) {
+                return false;
+            }
+        }
+
+        return $positionDenied;
     }
 
     private function getMysqldumperCommandConnectionArguments(): string

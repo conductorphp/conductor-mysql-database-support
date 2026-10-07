@@ -147,3 +147,24 @@ command it builds is relative, so left to the process's own working directory th
 archive landed wherever conductor happened to be started from, while the returned path claimed
 otherwise. On success the working directory is removed; on failure it is left in place, and named in
 the error, so there is something to diagnose.
+
+## Privileges: a database-scoped user is enough
+
+The mydumper adapter snapshots and restores with nothing but `ALL PRIVILEGES ON <database>.*`, which
+is all a managed database (Webscale, Aurora) gives its app user. No SUPER, REPLICATION CLIENT,
+BACKUP_ADMIN, RELOAD or SYSTEM_VARIABLES_ADMIN.
+
+- **Export.** mydumper reads the binary log position at the start and end of every dump, and 1.0 has
+  no option to skip it. Without REPLICATION CLIENT it still writes the whole dump, logs
+  `Couldn't get master position - ERROR 1227` as a warning, and exits 1. A snapshot has no use for
+  the position, so the export lets that one failure through, and only that one: any other MySQL
+  error, or any CRITICAL, still fails it, and the archive is checked as above either way. The lock
+  mode stays `LOCK_ALL`; the default `AUTO` would need BACKUP_ADMIN.
+- **Import.** myloader keeps a restore out of the binary log with `SET SESSION SQL_LOG_BIN = 0`, which
+  needs SUPER, SYSTEM_VARIABLES_ADMIN or SESSION_VARIABLES_ADMIN, and counts the refusal as an error.
+  The import tries the SET first; when the server refuses it, myloader is run with `--enable-binlog`
+  and the restore is binary-logged like any other write the user makes.
+
+A failed export or import now reports the warnings and errors mydumper or myloader wrote to stderr.
+Before, the message was the command and an empty `Output:`, because neither writes anything useful to
+stdout.

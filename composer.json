@@ -1,6 +1,6 @@
 {
   "name": "conductor/mysql-database-support",
-  "version": "6.3.4",
+  "version": "6.3.5",
   "description": "Conductor MySQL Database Support",
   "type": "library",
   "homepage": "https://github.com/conductorphp/mysql-database-support",

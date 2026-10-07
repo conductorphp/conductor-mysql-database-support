@@ -1,3 +1,10 @@
+[6.3.5](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.3.4...6.3.5) (2026-10-07)
+
+### Bug Fixes
+* snapshots and restores with a database-scoped user (CTAP-2267) ([a85f7d8](https://github.com/conductorphp/conductor-mysql-database-support/commit/a85f7d89651a3f84820321184c4d425542d3cbbe))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [6.3.4](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.3.3...6.3.4) (2026-10-06)
 
 ### Bug Fixes

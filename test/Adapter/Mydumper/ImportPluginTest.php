@@ -166,11 +166,33 @@ class ImportPluginTest extends TestCase
         $this->assertStringContainsString("2> >(tee '/dump.log' >&2)", $command);
     }
 
-    private function getMyDumperImportCommand(string $database, string $importDir, string $errorLog): string
+    /**
+     * myloader's SET SESSION SQL_LOG_BIN = 0 needs a global privilege a managed database's app user
+     * does not have, and myloader counts its refusal as an error (CTAP-2267).
+     */
+    public function testLeavesBinaryLoggingOnWhenTheUserMayNotTurnItOff(): void
     {
+        $command = $this->getMyDumperImportCommand('mydb', '/dump', '/dump.log', false);
+
+        $this->assertStringContainsString(' --enable-binlog ', $command);
+    }
+
+    public function testKeepsTheRestoreOutOfTheBinaryLogWhenTheUserMay(): void
+    {
+        $command = $this->getMyDumperImportCommand('mydb', '/dump', '/dump.log');
+
+        $this->assertStringNotContainsString('--enable-binlog', $command);
+    }
+
+    private function getMyDumperImportCommand(
+        string $database,
+        string $importDir,
+        string $errorLog,
+        bool $canDisableBinlog = true
+    ): string {
         $method = new ReflectionMethod(ImportPlugin::class, 'getMyDumperImportCommand');
 
-        return $method->invoke($this->createImportPlugin(), $database, $importDir, $errorLog);
+        return $method->invoke($this->createImportPlugin(), $database, $importDir, $errorLog, $canDisableBinlog);
     }
 
     private function fixMetadataFile(): void
