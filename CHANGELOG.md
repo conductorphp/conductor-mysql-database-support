@@ -1,3 +1,10 @@
+[7.0.1](https://github.com/conductorphp/conductor-mysql-database-support/compare/7.0.0...7.0.1) (2026-10-11)
+
+### Bug Fixes
+* 7 for master (CTAP-1763) ([d8c7449](https://github.com/conductorphp/conductor-mysql-database-support/commit/d8c7449d9b4ba8305919089c45d68f82e3d1907a))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [7.0.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.3.5...7.0.0) (2026-10-11)
 
 ### Features
