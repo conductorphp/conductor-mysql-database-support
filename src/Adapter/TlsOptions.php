@@ -10,6 +10,7 @@ use function chmod;
 use function escapeshellarg;
 use function file_put_contents;
 use function filesize;
+use function function_exists;
 use function hash;
 use function implode;
 use function in_array;
@@ -203,6 +204,14 @@ final readonly class TlsOptions
 
     private static function systemCaBundle(): string
     {
+        // ext-openssl is suggested, not required (CTAP-1759); only this fallback needs it.
+        if (!function_exists('openssl_get_cert_locations')) {
+            throw new Exception\RuntimeException(
+                'MySQL TLS is on without "tls_ca", and finding the system CA bundle needs the openssl'
+                . ' extension. Set "tls_ca", or install ext-openssl.',
+            );
+        }
+
         $bundle = openssl_get_cert_locations()['default_cert_file'] ?? '';
         if (!is_string($bundle) || $bundle === '' || !is_readable($bundle)) {
             throw new Exception\RuntimeException(sprintf(

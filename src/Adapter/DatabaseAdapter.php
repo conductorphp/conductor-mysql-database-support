@@ -2,13 +2,15 @@
 
 namespace ConductorMySqlSupport\Adapter;
 
+use ConductorCore\Runtime\Requirement;
+use ConductorCore\Runtime\RuntimeRequirementsInterface;
 use ConductorCore\Database\DatabaseAdapterInterface;
 use ConductorMySqlSupport\Exception;
 use PDO;
 use PDOException;
 use PDOStatement;
 
-class DatabaseAdapter implements DatabaseAdapterInterface
+class DatabaseAdapter implements DatabaseAdapterInterface, RuntimeRequirementsInterface
 {
     private string $username;
     private string $password;
@@ -35,6 +37,17 @@ class DatabaseAdapter implements DatabaseAdapterInterface
     /**
      * @throws Exception\RuntimeException If error dropping db or db does not exist
      */
+    /**
+     * The driver behind the PDO connection. `ext-pdo_mysql` is suggested, not required, so a host
+     * that never selects this adapter does not need it (CTAP-1759).
+     *
+     * @return list<Requirement>
+     */
+    public function runtimeRequirements(): array
+    {
+        return [Requirement::extension('pdo_mysql', 'docker-php-ext-install pdo_mysql')];
+    }
+
     public function dropDatabaseIfExists(string $database): void
     {
         $statement = $this->runQuery("DROP DATABASE IF EXISTS " . $this->quoteIdentifier($database));

@@ -1,3 +1,19 @@
+[7.0.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.3.5...7.0.0) (2026-10-11)
+
+### Features
+* ext-openssl instead of requiring it (CTAP-1759) ([bb38bd5](https://github.com/conductorphp/conductor-mysql-database-support/commit/bb38bd5a914235cc841c16628fba9c373a30962a))
+* ext-pdo_mysql and declare every command (CTAP-1759) ([4f9364c](https://github.com/conductorphp/conductor-mysql-database-support/commit/4f9364cb87b7660cfae833f04c896be28bbf198d))
+* conductor/core ^6.0 (CTAP-1741) ([fcc0d39](https://github.com/conductorphp/conductor-mysql-database-support/commit/fcc0d39d9f42b37fbba854a0f3a7b0f4e6179034))
+* conductor/core ^5.0 (CTAP-1712) ([c93ecf0](https://github.com/conductorphp/conductor-mysql-database-support/commit/c93ecf0c7e6513082464ab18b0711ffd9e45f312))
+* a restore that cannot succeed, and verify what an export wrote (CTAP-1573) ([58ceabe](https://github.com/conductorphp/conductor-mysql-database-support/commit/58ceabe81d120c38902d76cdab61ba5f12e22c51))
+* sql_mode out of a mydumper dump before myloader runs (CTAP-1571) ([b0599b1](https://github.com/conductorphp/conductor-mysql-database-support/commit/b0599b1f20cb46f31657c1590f49ef2a31eb792d))
+### Bug Fixes
+* conductor/core ^7.0 (CTAP-1760) ([5a51401](https://github.com/conductorphp/conductor-mysql-database-support/commit/5a5140171bf2da9bbe336bc3976cb596cc25da25))
+* getTableMetadata columns so MySQL 8 row counts are read (CTAP-1628) ([6757273](https://github.com/conductorphp/conductor-mysql-database-support/commit/67572735e07f0d28986a3fb9557a69909fcd28d3))
+* definers for real, and stop inverting the option (CTAP-1607) ([d00be9f](https://github.com/conductorphp/conductor-mysql-database-support/commit/d00be9ff71e1733d5507df3c00b33be6fdb88ccf))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [6.3.5](https://github.com/conductorphp/conductor-mysql-database-support/compare/6.3.4...6.3.5) (2026-10-07)
 
 ### Bug Fixes

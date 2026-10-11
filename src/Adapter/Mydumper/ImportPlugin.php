@@ -4,6 +4,8 @@ namespace ConductorMySqlSupport\Adapter\Mydumper;
 
 use ConductorMySqlSupport\Adapter\ClientCredentials;
 use ConductorMySqlSupport\Adapter\TlsOptions;
+use ConductorCore\Runtime\Requirement;
+use ConductorCore\Runtime\RequirementChecker;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use ConductorMySqlSupport\Exception;
 use Psr\Log\LoggerAwareInterface;
@@ -360,42 +362,23 @@ class ImportPlugin
 
     public function assertIsUsable(): void
     {
-        try {
-            if (!is_callable('exec')) {
-                throw new Exception\RuntimeException('the "exec" function is not callable.');
-            }
+        (new RequirementChecker($this->shellAdapter))->assert(self::class, $this->runtimeRequirements());
+        // The version floor (CTAP-1572): myloader 1.0 renamed the options this plugin drives.
+        MydumperVersion::assertSupported('myloader');
+    }
 
-            $requiredFunctions = [
-                'tar',
-                'myloader',
-            ];
-            $missingFunctions = [];
-            foreach ($requiredFunctions as $requiredFunction) {
-                exec('which ' . escapeshellarg($requiredFunction) . ' &> /dev/null', $output, $return);
-                if (0 != $return) {
-                    $missingFunctions[] = $requiredFunction;
-                }
-            }
-
-            if ($missingFunctions) {
-                throw new Exception\RuntimeException(
-                    sprintf(
-                        'the "%s" shell function(s) are not available.',
-                        implode('", "', $missingFunctions)
-                    )
-                );
-            }
-
-            MydumperVersion::assertSupported('myloader');
-        } catch (\Exception $e) {
-            throw new Exception\RuntimeException(
-                sprintf(
-                    '%s is not usable in this environment because %s.',
-                    __CLASS__,
-                    $e->getMessage()
-                )
-            );
-        }
+    /**
+     * The commands this plugin shells out to, checked when the adapter is selected by configuration
+     * and again before each run (CTAP-1759).
+     *
+     * @return list<Requirement>
+     */
+    public function runtimeRequirements(): array
+    {
+        return [
+            Requirement::binary('tar'),
+            Requirement::binary('myloader', 'the mydumper package, 1.0.5 or newer'),
+        ];
     }
 
     public function setLogger(LoggerInterface $logger): void

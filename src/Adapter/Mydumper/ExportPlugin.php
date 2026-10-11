@@ -5,6 +5,8 @@ namespace ConductorMySqlSupport\Adapter\Mydumper;
 use ConductorMySqlSupport\Adapter\ClientCredentials;
 use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
+use ConductorCore\Runtime\Requirement;
+use ConductorCore\Runtime\RequirementChecker;
 use ConductorCore\Exception\ShellCommandFailedException;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use ConductorMySqlSupport\Exception;
@@ -351,48 +353,27 @@ class ExportPlugin
 
     public function assertIsUsable(): void
     {
-        try {
-            if (!is_callable('exec')) {
-                throw new RuntimeException('the "exec" function is not callable.');
-            }
+        (new RequirementChecker($this->shellAdapter))->assert(self::class, $this->runtimeRequirements());
+        // Every flag this plugin passes still exists in 1.0, so an older mydumper would export
+        // fine. The floor is asserted here anyway: mydumper and myloader ship together, so an
+        // image that would fail this check is one whose restores are already broken. Better to
+        // say so when the snapshot is taken than when someone tries to restore it.
+        MydumperVersion::assertSupported('mydumper');
+    }
 
-            $requiredFunctions = [
-                'mysql',
-                'mydumper',
-                // The export tars its own output and reads the archive back to check it.
-                'tar',
-            ];
-            $missingFunctions = [];
-            foreach ($requiredFunctions as $requiredFunction) {
-                exec('which ' . escapeshellarg($requiredFunction) . ' &> /dev/null', $output, $return);
-                if (0 != $return) {
-                    $missingFunctions[] = $requiredFunction;
-                }
-            }
-
-            if ($missingFunctions) {
-                throw new Exception\RuntimeException(
-                    sprintf(
-                        'the "%s" shell function(s) are not available.',
-                        implode('", "', $missingFunctions)
-                    )
-                );
-            }
-
-            // Every flag this plugin passes still exists in 1.0, so an older mydumper would export
-            // fine. The floor is asserted here anyway: mydumper and myloader ship together, so an
-            // image that would fail this check is one whose restores are already broken. Better to
-            // say so when the snapshot is taken than when someone tries to restore it.
-            MydumperVersion::assertSupported('mydumper');
-        } catch (\Exception $e) {
-            throw new Exception\RuntimeException(
-                sprintf(
-                    '%s is not usable in this environment because %s.',
-                    __CLASS__,
-                    $e->getMessage()
-                )
-            );
-        }
+    /**
+     * The commands this plugin shells out to, checked when the adapter is selected by configuration
+     * and again before each run (CTAP-1759).
+     *
+     * @return list<Requirement>
+     */
+    public function runtimeRequirements(): array
+    {
+        return [
+            Requirement::binary('mysql', 'the MariaDB or MySQL client'),
+            Requirement::binary('mydumper', 'the mydumper package, 1.0.5 or newer'),
+            Requirement::binary('tar'),
+        ];
     }
 
     public function setLogger(LoggerInterface $logger): void

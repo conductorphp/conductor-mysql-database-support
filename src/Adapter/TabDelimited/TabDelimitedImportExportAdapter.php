@@ -4,6 +4,8 @@ namespace ConductorMySqlSupport\Adapter\TabDelimited;
 
 use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
+use ConductorCore\Runtime\Requirement;
+use ConductorCore\Runtime\RuntimeRequirementsInterface;
 use ConductorCore\Exception;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
@@ -11,7 +13,7 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInterface, LoggerAwareInterface
+class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInterface, LoggerAwareInterface, RuntimeRequirementsInterface
 {
     private ImportPlugin $importPlugin;
     private ExportPlugin $exportPlugin;
@@ -63,6 +65,22 @@ class TabDelimitedImportExportAdapter implements DatabaseImportExportAdapterInte
     public static function getFileExtension(): string
     {
         return 'tgz';
+    }
+
+    /**
+     * Everything the import and export plugins shell out to, deduplicated; checked by the manager when
+     * configuration selects this adapter (CTAP-1759).
+     *
+     * @return list<Requirement>
+     */
+    public function runtimeRequirements(): array
+    {
+        $byName = [];
+        foreach ([...$this->importPlugin->runtimeRequirements(), ...$this->exportPlugin->runtimeRequirements()] as $requirement) {
+            $byName[$requirement->name] ??= $requirement;
+        }
+
+        return array_values($byName);
     }
 
     public function assertIsUsable(): void

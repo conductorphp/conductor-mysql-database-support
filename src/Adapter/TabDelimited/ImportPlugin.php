@@ -6,6 +6,8 @@ use ConductorMySqlSupport\Adapter\ClientCredentials;
 use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Exception;
+use ConductorCore\Runtime\Requirement;
+use ConductorCore\Runtime\RequirementChecker;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -41,41 +43,22 @@ class ImportPlugin
 
     public function assertIsUsable(): void
     {
-        try {
-            if (!is_callable('exec')) {
-                throw new Exception\RuntimeException('the "exec" function is not callable.');
-            }
+        (new RequirementChecker($this->shellAdapter))->assert(self::class, $this->runtimeRequirements());
+    }
 
-            $requiredFunctions = [
-                'mysql',
-                'mysqlimport',
-                'tar',
-            ];
-            $missingFunctions = [];
-            foreach ($requiredFunctions as $requiredFunction) {
-                exec('which ' . escapeshellarg($requiredFunction) . ' &> /dev/null', $output, $return);
-                if (0 !== $return) {
-                    $missingFunctions[] = $requiredFunction;
-                }
-            }
-
-            if ($missingFunctions) {
-                throw new Exception\RuntimeException(
-                    sprintf(
-                        'the "%s" shell function(s) are not available.',
-                        implode('", "', $missingFunctions)
-                    )
-                );
-            }
-        } catch (\Exception $e) {
-            throw new Exception\RuntimeException(
-                sprintf(
-                    '%s is not usable in this environment because %s.',
-                    __CLASS__,
-                    $e->getMessage()
-                )
-            );
-        }
+    /**
+     * The commands this plugin shells out to, checked when the adapter is selected by configuration
+     * and again before each run (CTAP-1759).
+     *
+     * @return list<Requirement>
+     */
+    public function runtimeRequirements(): array
+    {
+        return [
+            Requirement::binary('mysql', 'the MariaDB or MySQL client'),
+            Requirement::binary('mysqlimport', 'the MariaDB or MySQL client'),
+            Requirement::binary('tar'),
+        ];
     }
 
     public function importFromFile(

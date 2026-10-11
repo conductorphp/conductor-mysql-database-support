@@ -1,6 +1,6 @@
 {
   "name": "conductor/mysql-database-support",
-  "version": "6.3.5",
+  "version": "7.0.0",
   "description": "Conductor MySQL Database Support",
   "type": "library",
   "homepage": "https://github.com/conductorphp/mysql-database-support",
@@ -17,9 +17,7 @@
   },
   "require": {
     "php": "~8.4.1|~8.5.0",
-    "ext-openssl": "*",
-    "ext-pdo_mysql": "*",
-    "conductor/core": "^4.0 || ^5.0 || ^6.0"
+    "conductor/core": "^7.0"
   },
   "require-dev": {
     "laminas/laminas-coding-standard": "^2.5.0",
@@ -49,5 +47,11 @@
     "cs-fix": "phpcbf",
     "test": "phpunit --colors=always",
     "test-coverage": "phpunit --colors=always --coverage-clover clover.xml"
+  },
+  "suggest": {
+    "ext-openssl": "Needed when TLS verifies against the system CA bundle (\"tls_ca\" empty); checked at first use.",
+    "ext-pdo_mysql": "Required by the DatabaseAdapter (checked when the adapter is selected).",
+    "mydumper": "mydumper/myloader 1.0.5+ on PATH for the Mydumper import/export adapter.",
+    "mariadb-client": "mysql/mysqldump/mysqlimport on PATH for the Mysqldump and TabDelimited adapters."
   }
 }
