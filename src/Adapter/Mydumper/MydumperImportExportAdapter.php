@@ -4,6 +4,7 @@ namespace ConductorMySqlSupport\Adapter\Mydumper;
 
 use ConductorMySqlSupport\Adapter\TlsOptions;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
+use ConductorCore\Database\DatabaseImportPreflightInterface;
 use ConductorCore\Runtime\Requirement;
 use ConductorCore\Runtime\RuntimeRequirementsInterface;
 use ConductorCore\Exception;
@@ -13,7 +14,7 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterface, LoggerAwareInterface, RuntimeRequirementsInterface
+class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterface, DatabaseImportPreflightInterface, LoggerAwareInterface, RuntimeRequirementsInterface
 {
     private ImportPlugin $importPlugin;
     private ExportPlugin $exportPlugin;
@@ -53,6 +54,11 @@ class MydumperImportExportAdapter implements DatabaseImportExportAdapterInterfac
         array  $options = []
     ): void {
         $this->importPlugin->importFromFile($filename, $database, $options);
+    }
+
+    public function assertCanImportFile(string $filename, string $database): void
+    {
+        $this->importPlugin->assertCanImportFile($filename, $database);
     }
 
     public function exportToFile(

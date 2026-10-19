@@ -1,3 +1,10 @@
+[7.1.0](https://github.com/conductorphp/conductor-mysql-database-support/compare/7.0.1...7.1.0) (2026-10-19)
+
+### Features
+* emptyDatabase() drops every table, view, routine and event in place (CTAP-2756) ([5f6d5bd](https://github.com/conductorphp/conductor-mysql-database-support/commit/5f6d5bdc30f5feade2bcb6400c2ab990f5691310))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [7.0.1](https://github.com/conductorphp/conductor-mysql-database-support/compare/7.0.0...7.0.1) (2026-10-11)
 
 ### Bug Fixes

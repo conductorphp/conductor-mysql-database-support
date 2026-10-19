@@ -120,7 +120,11 @@ The target server will not accept 1 of the 3 table definition(s) in this dump:
 The restore was stopped before it changed anything...
 ```
 
-Nothing about the real database changes on that path. On failure the extracted dump and myloader's
+Nothing about the real database changes on that path. A snapshot restore (`app:deploy`) drops the
+database before it imports, so it runs the same check first, from the downloaded dump's schema files
+alone, before the pre-restore dump and the drop: a refused snapshot leaves the existing database as it
+was (CTAP-2732). Any import/export adapter can offer that check by implementing
+`ConductorCore\Database\DatabaseImportPreflightInterface`. On failure the extracted dump and myloader's
 output are left on disk, and their locations logged, so there is something to look at.
 
 Only table definitions are rehearsed. Views, triggers and routines reference objects a scratch

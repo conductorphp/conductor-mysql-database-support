@@ -62,9 +62,14 @@ class RestorePreflight
     }
 
     /**
-     * @throws Exception\RuntimeException
+     * The schema half of check(), on its own. A snapshot restore runs it before it drops the database
+     * (CTAP-2732), when the existing tables are about to go anyway and warning about them would be noise.
+     *
+     * @param string $extractedPath Path to an extracted, sql_mode-sanitized mydumper dump directory. Only
+     *                              its schema files are read, so they are all it needs to hold.
+     * @throws Exception\RuntimeException If the target server will not accept the dump's schema
      */
-    private function assertSchemaLoads(string $extractedPath): void
+    public function assertSchemaLoads(string $extractedPath): void
     {
         $schemas = $this->readTableSchemas($extractedPath);
         if (!$schemas) {

@@ -119,6 +119,50 @@ class ImportPlugin
     }
 
     /**
+     * The schema check importFromFile() makes, made without touching the file or the target, so a
+     * snapshot restore can refuse a dump before it drops the database rather than after (CTAP-2732).
+     *
+     * Only the schema files are extracted, into a scratch directory of their own: the data is most of
+     * the dump and the check never reads it. importFromFile() then extracts the whole file and checks
+     * again, which costs one more pass over the table definitions.
+     *
+     * @throws Exception\RuntimeException If the file is not a mydumper export or the target server will
+     *                                    not accept its schema
+     */
+    public function assertCanImportFile(string $filename, string $database): void
+    {
+        $this->assertIsUsable();
+        if (0 !== strcasecmp('.tgz', substr($filename, -4))) {
+            throw new Exception\RuntimeException('Invalid file extension. Should be .tgz.');
+        }
+
+        $scratchPath = sys_get_temp_dir() . '/conductor-restore-preflight-' . bin2hex(random_bytes(6));
+        if (!mkdir($scratchPath, 0700)) {
+            throw new Exception\RuntimeException("Could not create \"$scratchPath\" to check the dump's schema in.");
+        }
+
+        try {
+            // Every mydumper export has a "<db>-schema-create.sql", so even a dump of an empty database
+            // matches and tar has no reason to fail on a valid file.
+            $this->shellAdapter->runShellCommand(
+                'tar xzf ' . escapeshellarg($filename) . ' -C ' . escapeshellarg($scratchPath)
+                . " --wildcards '*-schema*'"
+            );
+
+            $extracted = glob($scratchPath . '/*', GLOB_ONLYDIR) ?: [];
+            if (1 !== count($extracted)) {
+                throw new Exception\RuntimeException("File \"$filename\" is not a valid mydumper export.");
+            }
+
+            $this->logger->info("Checking \"$filename\" against the target server before database \"$database\" is replaced.");
+            $this->sqlModeSanitizer->sanitize($extracted[0]);
+            $this->restorePreflight->assertSchemaLoads($extracted[0]);
+        } finally {
+            $this->shellAdapter->runShellCommand('rm -rf ' . escapeshellarg($scratchPath));
+        }
+    }
+
+    /**
      * A failed restore is the one time the extracted dump is worth keeping, so say where it is rather
      * than leaving it as an unexplained directory. The error log only exists if myloader itself ran —
      * a restore refused before that point never created one.

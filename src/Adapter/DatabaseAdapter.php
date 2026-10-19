@@ -5,12 +5,13 @@ namespace ConductorMySqlSupport\Adapter;
 use ConductorCore\Runtime\Requirement;
 use ConductorCore\Runtime\RuntimeRequirementsInterface;
 use ConductorCore\Database\DatabaseAdapterInterface;
+use ConductorCore\Database\DatabaseEmptyingInterface;
 use ConductorMySqlSupport\Exception;
 use PDO;
 use PDOException;
 use PDOStatement;
 
-class DatabaseAdapter implements DatabaseAdapterInterface, RuntimeRequirementsInterface
+class DatabaseAdapter implements DatabaseAdapterInterface, DatabaseEmptyingInterface, RuntimeRequirementsInterface
 {
     private string $username;
     private string $password;
@@ -80,6 +81,15 @@ class DatabaseAdapter implements DatabaseAdapterInterface, RuntimeRequirementsIn
     private function quoteIdentifier(string $identifier): string
     {
         return '`' . preg_replace('/[^A-Za-z0-9_]+/', '', $identifier) . '`';
+    }
+
+    /**
+     * For a name read back from the server, which may hold any character: unlike quoteIdentifier(), it
+     * escapes the name instead of stripping it
+     */
+    private function quoteObjectName(string $name): string
+    {
+        return '`' . str_replace('`', '``', $name) . '`';
     }
 
     public function getDatabases(): array
@@ -153,6 +163,72 @@ class DatabaseAdapter implements DatabaseAdapterInterface, RuntimeRequirementsIn
     public function createDatabase(string $database): void
     {
         $this->runQuery("CREATE DATABASE " . $this->quoteIdentifier($database));
+    }
+
+    /**
+     * Needs only rights inside the database: DROP on its tables and views, ALTER ROUTINE on its
+     * routines and EVENT for its events. Foreign key checks are off for the session while the tables go,
+     * so they drop in any order. Triggers go with their tables. On MySQL 8, a view, routine or event
+     * whose definer has SYSTEM_USER (root, say) also needs SYSTEM_USER to drop, so those go first: a
+     * refusal stops the restore before any table is dropped.
+     *
+     * @throws Exception\RuntimeException If an object cannot be dropped.
+     */
+    public function emptyDatabase(string $database): void
+    {
+        $schema = $this->quoteIdentifier($database);
+        $parameters = [':database' => trim($schema, '`')];
+        $statements = $tableStatements = [];
+        // TABLE_TYPE is VIEW or BASE TABLE, or on MariaDB also SYSTEM VERSIONED or SEQUENCE, which DROP
+        // TABLE drops as well
+        $tables = $this->runQuery(
+            'SELECT TABLE_NAME AS name, TABLE_TYPE AS type FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = :database ORDER BY TABLE_NAME',
+            $parameters
+        )->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($tables as $table) {
+            if ('VIEW' === $table['type']) {
+                $statements[] = "DROP VIEW $schema." . $this->quoteObjectName($table['name']);
+            } else {
+                $tableStatements[] = "DROP TABLE $schema." . $this->quoteObjectName($table['name']);
+            }
+        }
+
+        $routines = $this->runQuery(
+            'SELECT ROUTINE_NAME AS name, ROUTINE_TYPE AS type FROM information_schema.ROUTINES
+                WHERE ROUTINE_SCHEMA = :database AND ROUTINE_TYPE IN (\'PROCEDURE\', \'FUNCTION\')
+                ORDER BY ROUTINE_TYPE, ROUTINE_NAME',
+            $parameters
+        )->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($routines as $routine) {
+            $statements[] = "DROP {$routine['type']} $schema." . $this->quoteObjectName($routine['name']);
+        }
+
+        $events = $this->runQuery(
+            'SELECT EVENT_NAME FROM information_schema.EVENTS WHERE EVENT_SCHEMA = :database ORDER BY EVENT_NAME',
+            $parameters
+        )->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($events as $event) {
+            $statements[] = "DROP EVENT $schema." . $this->quoteObjectName($event);
+        }
+        $statements = [...$statements, ...$tableStatements];
+
+        $this->runQuery('SET FOREIGN_KEY_CHECKS = 0');
+        try {
+            foreach ($statements as $statement) {
+                try {
+                    $this->runQuery($statement);
+                } catch (PDOException $exception) {
+                    throw new Exception\RuntimeException(
+                        "Error emptying database \"$database\" ($statement): {$exception->getMessage()}",
+                        (int)$exception->getCode(),
+                        $exception
+                    );
+                }
+            }
+        } finally {
+            $this->runQuery('SET FOREIGN_KEY_CHECKS = 1');
+        }
     }
 
     /**
